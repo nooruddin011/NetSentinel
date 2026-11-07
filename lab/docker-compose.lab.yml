@@ -1,0 +1,83 @@
+# Argus LAB: a deliberately vulnerable website (DVWA) + Argus + the collector, on your own machine.
+#
+#   docker compose -f lab/docker-compose.lab.yml up --build -d
+#
+#   Argus dashboard  http://localhost:8080   (admin / Lab-Admin-Passw0rd!)
+#   Target website   http://localhost:8081   (DVWA; attack THIS, and only this)
+#
+# Everything is bound to 127.0.0.1, so nothing is reachable from other computers.
+# The passwords and API key below are for this local lab ONLY. Never reuse them anywhere real.
+name: argus-lab
+
+services:
+  backend:
+    build: { context: .., dockerfile: docker/backend.Dockerfile }
+    environment:
+      APP_ENV: development                      # the lab's pre-shared key is refused in production
+      ADMIN_PASSWORD: "Lab-Admin-Passw0rd!"
+      JWT_SECRET: "lab-only-jwt-secret-lab-only-jwt-secret-1234567890"
+      CORS_ORIGINS: "http://localhost:8080"
+      ARGUS_BOOTSTRAP_SOURCE_KEY: "agk_LAB_ONLY_not_a_secret_0123456789abcdefghijk"
+      ARGUS_BOOTSTRAP_SOURCE_NAME: "Lab web server (DVWA)"
+      SIMULATION_ENABLED: "true"                # Auto mode: switches itself off once the collector connects
+    volumes: [ "argus-data:/app/data" ]
+    restart: unless-stopped
+
+  frontend:
+    build: { context: .., dockerfile: docker/frontend.Dockerfile }
+    ports: [ "127.0.0.1:8080:80" ]
+    depends_on: [ backend ]
+    restart: unless-stopped
+
+  # ---- the target website (intentionally vulnerable) ------------------------------------------------------------
+  dvwa:
+    image: ghcr.io/digininja/dvwa:latest
+    environment: { DB_SERVER: db }
+    depends_on: [ db ]
+    restart: unless-stopped
+  db:
+    image: docker.io/library/mariadb:10
+    environment:
+      MYSQL_ROOT_PASSWORD: dvwa
+      MYSQL_DATABASE: dvwa
+      MYSQL_USER: dvwa
+      MYSQL_PASSWORD: p@ssw0rd
+    volumes: [ "dvwa-db:/var/lib/mysql" ]
+    restart: unless-stopped
+  target-proxy:                                  # what you attack; it writes the access log the collector reads
+    image: nginx:1.27-alpine
+    volumes:
+      - ./nginx-target.conf:/etc/nginx/nginx.conf:ro
+      - proxy-logs:/var/log/nginx
+    ports: [ "127.0.0.1:8081:80" ]
+    depends_on: [ dvwa ]
+    restart: unless-stopped
+
+  # ---- the collector: follows the access log and streams it to Argus -------------------------------------------
+  collector:
+    build: { context: .., dockerfile: docker/collector.Dockerfile }
+    environment:
+      ARGUS_URL: "http://backend:8000"
+      ARGUS_KEY: "agk_LAB_ONLY_not_a_secret_0123456789abcdefghijk"
+    command: [ "--file", "/logs/argus_access.log", "--format", "combined", "--state-file", "/state/state.json", "--exclude-path", "/healthz" ]
+    volumes:
+      - proxy-logs:/logs:ro
+      - collector-state:/state
+    depends_on: [ backend, target-proxy ]
+    restart: unless-stopped
+
+  # ---- optional: a Kali container with real attack tools (sqlmap, hydra, nikto, nmap) ----------------------------
+  #   docker compose -f lab/docker-compose.lab.yml --profile attacker run --rm attacker
+  attacker:
+    image: kalilinux/kali-rolling
+    profiles: [ "attacker" ]
+    command: [ "bash", "-c", "apt-get update -qq && apt-get install -y -qq sqlmap hydra nikto nmap curl >/dev/null && echo 'Tools ready. Target: http://target-proxy' && exec bash" ]
+    stdin_open: true
+    tty: true
+    depends_on: [ target-proxy ]
+
+volumes:
+  argus-data:
+  dvwa-db:
+  proxy-logs:
+  collector-state:

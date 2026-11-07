@@ -1,0 +1,1178 @@
+{
+  "created_at": "2026-10-10T06:24:14+00:00",
+  "dataset": {
+    "name": "synthetic-flows-v1 (NSL-KDD/CICIDS-style simulation)",
+    "synthetic": true,
+    "rows": 15000,
+    "train_rows": 12000,
+    "test_rows": 3000,
+    "dropped_rows": 0,
+    "class_counts": {
+      "Benign": 9378,
+      "DDoS": 1017,
+      "SQL Injection": 497,
+      "XSS": 453,
+      "Phishing": 464,
+      "Brute Force": 697,
+      "Malware": 419,
+      "Ransomware": 250,
+      "Botnet": 499,
+      "Port Scanning": 681,
+      "Insider Threat": 277,
+      "MITM": 368
+    }
+  },
+  "config": {
+    "dataset": "synthetic",
+    "csv_path": null,
+    "n_samples": 15000,
+    "seed": 42,
+    "test_size": 0.2,
+    "cv_folds": 5,
+    "smote_ratio": 0.35,
+    "target_fpr": 0.01,
+    "rf_trees": 200,
+    "gb_iter": 120,
+    "mlp_hidden": [
+      128,
+      64
+    ],
+    "mlp_iter": 120,
+    "novel_n": 1500,
+    "stealth": 0.2,
+    "use_xgboost": true,
+    "use_lightgbm": true
+  },
+  "classes": [
+    "Benign",
+    "DDoS",
+    "SQL Injection",
+    "XSS",
+    "Phishing",
+    "Brute Force",
+    "Malware",
+    "Ransomware",
+    "Botnet",
+    "Port Scanning",
+    "Insider Threat",
+    "MITM"
+  ],
+  "features": [
+    "duration",
+    "is_tcp",
+    "is_udp",
+    "is_icmp",
+    "dst_port",
+    "src_bytes",
+    "dst_bytes",
+    "src_pkts",
+    "dst_pkts",
+    "conn_count_src",
+    "distinct_dst_ports",
+    "distinct_dst_hosts",
+    "failed_logins",
+    "error_rate",
+    "syn_ratio",
+    "payload_len",
+    "payload_entropy",
+    "special_char_ratio",
+    "sql_kw_count",
+    "script_tag_count",
+    "has_ip_url",
+    "phish_kw_count",
+    "domain_age_days",
+    "cert_mismatch",
+    "latency_ratio",
+    "off_hours",
+    "unusual_dest",
+    "smb_write_rate",
+    "beacon_interval_std",
+    "dns_query_rate",
+    "bytes_per_sec",
+    "pkts_per_sec",
+    "avg_pkt_size",
+    "byte_ratio"
+  ],
+  "decision": {
+    "target_fpr": 0.01,
+    "tau": 0.3766,
+    "weights": {
+      "random_forest": 0.3422,
+      "gradient_boosting": 0.3542,
+      "neural_network": 0.3037
+    }
+  },
+  "models": {
+    "random_forest": {
+      "accuracy": 0.9643,
+      "precision": 0.9397,
+      "recall": 0.9184,
+      "f1": 0.9285,
+      "f1_weighted": 0.9641,
+      "roc_auc": 0.9887,
+      "false_positive_rate": 0.0085,
+      "detection_rate": 0.9609,
+      "tau": 0.4849,
+      "per_class": {
+        "Benign": {
+          "precision": 0.9769,
+          "recall": 0.9915,
+          "f1": 0.9841,
+          "support": 1876
+        },
+        "DDoS": {
+          "precision": 0.9372,
+          "recall": 0.9557,
+          "f1": 0.9463,
+          "support": 203
+        },
+        "SQL Injection": {
+          "precision": 0.9444,
+          "recall": 0.8586,
+          "f1": 0.8995,
+          "support": 99
+        },
+        "XSS": {
+          "precision": 0.9438,
+          "recall": 0.9231,
+          "f1": 0.9333,
+          "support": 91
+        },
+        "Phishing": {
+          "precision": 0.9659,
+          "recall": 0.914,
+          "f1": 0.9392,
+          "support": 93
+        },
+        "Brute Force": {
+          "precision": 0.9767,
+          "recall": 0.9065,
+          "f1": 0.9403,
+          "support": 139
+        },
+        "Malware": {
+          "precision": 0.9506,
+          "recall": 0.9167,
+          "f1": 0.9333,
+          "support": 84
+        },
+        "Ransomware": {
+          "precision": 0.898,
+          "recall": 0.88,
+          "f1": 0.8889,
+          "support": 50
+        },
+        "Botnet": {
+          "precision": 0.9677,
+          "recall": 0.9,
+          "f1": 0.9326,
+          "support": 100
+        },
+        "Port Scanning": {
+          "precision": 0.9489,
+          "recall": 0.9559,
+          "f1": 0.9524,
+          "support": 136
+        },
+        "Insider Threat": {
+          "precision": 0.8571,
+          "recall": 0.8727,
+          "f1": 0.8649,
+          "support": 55
+        },
+        "MITM": {
+          "precision": 0.9091,
+          "recall": 0.9459,
+          "f1": 0.9272,
+          "support": 74
+        }
+      },
+      "cv_f1_mean": 0.9297,
+      "cv_f1_std": 0.0074,
+      "infer_ms": 9.331,
+      "train_seconds": 21.76,
+      "weight": 0.3422
+    },
+    "gradient_boosting": {
+      "accuracy": 0.9667,
+      "precision": 0.9439,
+      "recall": 0.9288,
+      "f1": 0.9356,
+      "f1_weighted": 0.9666,
+      "roc_auc": 0.9892,
+      "false_positive_rate": 0.0091,
+      "detection_rate": 0.9617,
+      "tau": 0.05,
+      "per_class": {
+        "Benign": {
+          "precision": 0.9774,
+          "recall": 0.9909,
+          "f1": 0.9841,
+          "support": 1876
+        },
+        "DDoS": {
+          "precision": 0.9507,
+          "recall": 0.9507,
+          "f1": 0.9507,
+          "support": 203
+        },
+        "SQL Injection": {
+          "precision": 0.956,
+          "recall": 0.8788,
+          "f1": 0.9158,
+          "support": 99
+        },
+        "XSS": {
+          "precision": 0.9651,
+          "recall": 0.9121,
+          "f1": 0.9379,
+          "support": 91
+        },
+        "Phishing": {
+          "precision": 0.977,
+          "recall": 0.914,
+          "f1": 0.9444,
+          "support": 93
+        },
+        "Brute Force": {
+          "precision": 0.9921,
+          "recall": 0.9065,
+          "f1": 0.9474,
+          "support": 139
+        },
+        "Malware": {
+          "precision": 0.9873,
+          "recall": 0.9286,
+          "f1": 0.9571,
+          "support": 84
+        },
+        "Ransomware": {
+          "precision": 0.902,
+          "recall": 0.92,
+          "f1": 0.9109,
+          "support": 50
+        },
+        "Botnet": {
+          "precision": 0.9293,
+          "recall": 0.92,
+          "f1": 0.9246,
+          "support": 100
+        },
+        "Port Scanning": {
+          "precision": 0.9489,
+          "recall": 0.9559,
+          "f1": 0.9524,
+          "support": 136
+        },
+        "Insider Threat": {
+          "precision": 0.8065,
+          "recall": 0.9091,
+          "f1": 0.8547,
+          "support": 55
+        },
+        "MITM": {
+          "precision": 0.9342,
+          "recall": 0.9595,
+          "f1": 0.9467,
+          "support": 74
+        }
+      },
+      "cv_f1_mean": 0.9377,
+      "cv_f1_std": 0.005,
+      "infer_ms": 8.302,
+      "train_seconds": 14.16,
+      "weight": 0.3542
+    },
+    "neural_network": {
+      "accuracy": 0.955,
+      "precision": 0.9293,
+      "recall": 0.8907,
+      "f1": 0.908,
+      "f1_weighted": 0.9543,
+      "roc_auc": 0.9819,
+      "false_positive_rate": 0.0096,
+      "detection_rate": 0.9484,
+      "tau": 0.7264,
+      "per_class": {
+        "Benign": {
+          "precision": 0.9697,
+          "recall": 0.9904,
+          "f1": 0.98,
+          "support": 1876
+        },
+        "DDoS": {
+          "precision": 0.9455,
+          "recall": 0.9409,
+          "f1": 0.9432,
+          "support": 203
+        },
+        "SQL Injection": {
+          "precision": 0.9655,
+          "recall": 0.8485,
+          "f1": 0.9032,
+          "support": 99
+        },
+        "XSS": {
+          "precision": 0.9556,
+          "recall": 0.9451,
+          "f1": 0.9503,
+          "support": 91
+        },
+        "Phishing": {
+          "precision": 0.9302,
+          "recall": 0.8602,
+          "f1": 0.8939,
+          "support": 93
+        },
+        "Brute Force": {
+          "precision": 0.9389,
+          "recall": 0.8849,
+          "f1": 0.9111,
+          "support": 139
+        },
+        "Malware": {
+          "precision": 0.962,
+          "recall": 0.9048,
+          "f1": 0.9325,
+          "support": 84
+        },
+        "Ransomware": {
+          "precision": 0.9149,
+          "recall": 0.86,
+          "f1": 0.8866,
+          "support": 50
+        },
+        "Botnet": {
+          "precision": 0.9286,
+          "recall": 0.91,
+          "f1": 0.9192,
+          "support": 100
+        },
+        "Port Scanning": {
+          "precision": 0.9071,
+          "recall": 0.9338,
+          "f1": 0.9203,
+          "support": 136
+        },
+        "Insider Threat": {
+          "precision": 0.9048,
+          "recall": 0.6909,
+          "f1": 0.7835,
+          "support": 55
+        },
+        "MITM": {
+          "precision": 0.8293,
+          "recall": 0.9189,
+          "f1": 0.8718,
+          "support": 74
+        }
+      },
+      "cv_f1_mean": 0.9023,
+      "cv_f1_std": 0.0043,
+      "infer_ms": 0.145,
+      "train_seconds": 11.18,
+      "weight": 0.3037
+    },
+    "ensemble": {
+      "accuracy": 0.9677,
+      "precision": 0.9456,
+      "recall": 0.9284,
+      "f1": 0.9364,
+      "f1_weighted": 0.9675,
+      "roc_auc": 0.9887,
+      "false_positive_rate": 0.008,
+      "detection_rate": 0.9653,
+      "tau": 0.3766,
+      "per_class": {
+        "Benign": {
+          "precision": 0.9795,
+          "recall": 0.992,
+          "f1": 0.9857,
+          "support": 1876
+        },
+        "DDoS": {
+          "precision": 0.9554,
+          "recall": 0.9507,
+          "f1": 0.9531,
+          "support": 203
+        },
+        "SQL Injection": {
+          "precision": 0.9462,
+          "recall": 0.8889,
+          "f1": 0.9167,
+          "support": 99
+        },
+        "XSS": {
+          "precision": 0.9655,
+          "recall": 0.9231,
+          "f1": 0.9438,
+          "support": 91
+        },
+        "Phishing": {
+          "precision": 0.9765,
+          "recall": 0.8925,
+          "f1": 0.9326,
+          "support": 93
+        },
+        "Brute Force": {
+          "precision": 0.9767,
+          "recall": 0.9065,
+          "f1": 0.9403,
+          "support": 139
+        },
+        "Malware": {
+          "precision": 0.975,
+          "recall": 0.9286,
+          "f1": 0.9512,
+          "support": 84
+        },
+        "Ransomware": {
+          "precision": 0.9375,
+          "recall": 0.9,
+          "f1": 0.9184,
+          "support": 50
+        },
+        "Botnet": {
+          "precision": 0.94,
+          "recall": 0.94,
+          "f1": 0.94,
+          "support": 100
+        },
+        "Port Scanning": {
+          "precision": 0.9424,
+          "recall": 0.9632,
+          "f1": 0.9527,
+          "support": 136
+        },
+        "Insider Threat": {
+          "precision": 0.8772,
+          "recall": 0.9091,
+          "f1": 0.8929,
+          "support": 55
+        },
+        "MITM": {
+          "precision": 0.875,
+          "recall": 0.9459,
+          "f1": 0.9091,
+          "support": 74
+        }
+      },
+      "infer_ms": 16.154,
+      "train_seconds": 47.1,
+      "cv_f1_mean": 0.9232
+    }
+  },
+  "roc": {
+    "random_forest": {
+      "fpr": [
+        0.0,
+        0.001,
+        0.002,
+        0.005,
+        0.01,
+        0.02,
+        0.025,
+        0.05,
+        0.075,
+        0.1,
+        0.125,
+        0.15,
+        0.175,
+        0.2,
+        0.225,
+        0.25,
+        0.275,
+        0.3,
+        0.325,
+        0.35,
+        0.375,
+        0.4,
+        0.425,
+        0.45,
+        0.475,
+        0.5,
+        0.525,
+        0.55,
+        0.575,
+        0.6,
+        0.625,
+        0.65,
+        0.675,
+        0.7,
+        0.725,
+        0.75,
+        0.775,
+        0.8,
+        0.825,
+        0.85,
+        0.875,
+        0.9,
+        0.925,
+        0.95,
+        0.975,
+        1.0
+      ],
+      "tpr": [
+        0.7358,
+        0.8797,
+        0.9199,
+        0.9491,
+        0.9626,
+        0.9671,
+        0.9751,
+        0.9812,
+        0.984,
+        0.9856,
+        0.9867,
+        0.987,
+        0.9875,
+        0.9888,
+        0.9893,
+        0.9893,
+        0.9902,
+        0.991,
+        0.9911,
+        0.9911,
+        0.9913,
+        0.992,
+        0.992,
+        0.9927,
+        0.9938,
+        0.9938,
+        0.9938,
+        0.9943,
+        0.9952,
+        0.9964,
+        0.9964,
+        0.9964,
+        0.9964,
+        0.997,
+        0.9973,
+        0.9973,
+        0.9974,
+        0.9978,
+        0.9982,
+        0.9986,
+        0.9989,
+        0.9992,
+        0.9995,
+        0.9999,
+        1.0,
+        1.0
+      ],
+      "auc": 0.9923
+    },
+    "gradient_boosting": {
+      "fpr": [
+        0.0,
+        0.001,
+        0.002,
+        0.005,
+        0.01,
+        0.02,
+        0.025,
+        0.05,
+        0.075,
+        0.1,
+        0.125,
+        0.15,
+        0.175,
+        0.2,
+        0.225,
+        0.25,
+        0.275,
+        0.3,
+        0.325,
+        0.35,
+        0.375,
+        0.4,
+        0.425,
+        0.45,
+        0.475,
+        0.5,
+        0.525,
+        0.55,
+        0.575,
+        0.6,
+        0.625,
+        0.65,
+        0.675,
+        0.7,
+        0.725,
+        0.75,
+        0.775,
+        0.8,
+        0.825,
+        0.85,
+        0.875,
+        0.9,
+        0.925,
+        0.95,
+        0.975,
+        1.0
+      ],
+      "tpr": [
+        0.9084,
+        0.9226,
+        0.9422,
+        0.9537,
+        0.9626,
+        0.9698,
+        0.9724,
+        0.9769,
+        0.9822,
+        0.9831,
+        0.9831,
+        0.9849,
+        0.9858,
+        0.9867,
+        0.9867,
+        0.9875,
+        0.9884,
+        0.9911,
+        0.992,
+        0.992,
+        0.992,
+        0.9929,
+        0.9929,
+        0.9929,
+        0.9938,
+        0.9947,
+        0.9947,
+        0.9947,
+        0.9947,
+        0.9947,
+        0.9947,
+        0.9947,
+        0.9947,
+        0.9947,
+        0.9947,
+        0.9956,
+        0.9964,
+        0.9964,
+        0.9964,
+        0.9982,
+        0.9991,
+        0.9991,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "auc": 0.9915
+    },
+    "neural_network": {
+      "fpr": [
+        0.0,
+        0.001,
+        0.002,
+        0.005,
+        0.01,
+        0.02,
+        0.025,
+        0.05,
+        0.075,
+        0.1,
+        0.125,
+        0.15,
+        0.175,
+        0.2,
+        0.225,
+        0.25,
+        0.275,
+        0.3,
+        0.325,
+        0.35,
+        0.375,
+        0.4,
+        0.425,
+        0.45,
+        0.475,
+        0.5,
+        0.525,
+        0.55,
+        0.575,
+        0.6,
+        0.625,
+        0.65,
+        0.675,
+        0.7,
+        0.725,
+        0.75,
+        0.775,
+        0.8,
+        0.825,
+        0.85,
+        0.875,
+        0.9,
+        0.925,
+        0.95,
+        0.975,
+        1.0
+      ],
+      "tpr": [
+        0.919,
+        0.9306,
+        0.9359,
+        0.9457,
+        0.9484,
+        0.9591,
+        0.9591,
+        0.9662,
+        0.9706,
+        0.9724,
+        0.9742,
+        0.976,
+        0.9778,
+        0.9795,
+        0.9795,
+        0.9804,
+        0.9822,
+        0.9831,
+        0.984,
+        0.9858,
+        0.9858,
+        0.9875,
+        0.9884,
+        0.9893,
+        0.9902,
+        0.9902,
+        0.9911,
+        0.992,
+        0.9929,
+        0.9929,
+        0.9938,
+        0.9938,
+        0.9938,
+        0.9938,
+        0.9947,
+        0.9956,
+        0.9956,
+        0.9956,
+        0.9956,
+        0.9956,
+        0.9956,
+        0.9973,
+        0.9982,
+        0.9982,
+        0.9991,
+        1.0
+      ],
+      "auc": 0.9869
+    },
+    "ensemble": {
+      "fpr": [
+        0.0,
+        0.001,
+        0.002,
+        0.005,
+        0.01,
+        0.02,
+        0.025,
+        0.05,
+        0.075,
+        0.1,
+        0.125,
+        0.15,
+        0.175,
+        0.2,
+        0.225,
+        0.25,
+        0.275,
+        0.3,
+        0.325,
+        0.35,
+        0.375,
+        0.4,
+        0.425,
+        0.45,
+        0.475,
+        0.5,
+        0.525,
+        0.55,
+        0.575,
+        0.6,
+        0.625,
+        0.65,
+        0.675,
+        0.7,
+        0.725,
+        0.75,
+        0.775,
+        0.8,
+        0.825,
+        0.85,
+        0.875,
+        0.9,
+        0.925,
+        0.95,
+        0.975,
+        1.0
+      ],
+      "tpr": [
+        0.7571,
+        0.9084,
+        0.9466,
+        0.9582,
+        0.9671,
+        0.9715,
+        0.9742,
+        0.9786,
+        0.9813,
+        0.984,
+        0.9858,
+        0.9867,
+        0.9867,
+        0.9875,
+        0.9884,
+        0.9884,
+        0.9893,
+        0.9893,
+        0.9902,
+        0.992,
+        0.992,
+        0.992,
+        0.992,
+        0.992,
+        0.992,
+        0.9929,
+        0.9938,
+        0.9938,
+        0.9938,
+        0.9938,
+        0.9964,
+        0.9973,
+        0.9973,
+        0.9973,
+        0.9973,
+        0.9973,
+        0.9973,
+        0.9982,
+        0.9982,
+        0.9991,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "auc": 0.992
+    }
+  },
+  "confusion_matrix": [
+    [
+      1861,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      2,
+      1,
+      0,
+      5,
+      6
+    ],
+    [
+      5,
+      193,
+      1,
+      0,
+      0,
+      1,
+      0,
+      0,
+      1,
+      2,
+      0,
+      0
+    ],
+    [
+      6,
+      0,
+      88,
+      3,
+      1,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      3,
+      1,
+      2,
+      84,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      3,
+      2,
+      1,
+      0,
+      83,
+      0,
+      1,
+      0,
+      1,
+      0,
+      0,
+      2
+    ],
+    [
+      5,
+      2,
+      0,
+      0,
+      0,
+      126,
+      0,
+      0,
+      2,
+      3,
+      0,
+      1
+    ],
+    [
+      2,
+      1,
+      0,
+      0,
+      0,
+      0,
+      78,
+      0,
+      1,
+      1,
+      0,
+      1
+    ],
+    [
+      3,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      45,
+      0,
+      1,
+      1,
+      0
+    ],
+    [
+      2,
+      1,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      94,
+      1,
+      1,
+      0
+    ],
+    [
+      3,
+      2,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      131,
+      0,
+      0
+    ],
+    [
+      4,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      50,
+      0
+    ],
+    [
+      3,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      70
+    ]
+  ],
+  "anomaly": {
+    "threshold": 0.55256,
+    "benign_flag_rate": 0.0059,
+    "known_attack_flag_rate": 0.7491,
+    "autoencoder_auc_vs_benign": 1.0,
+    "isolation_forest_auc_vs_benign": 0.9921,
+    "novel_flag_rate": 1.0
+  },
+  "hybrid": {
+    "benign_false_positive_rate": 0.0128,
+    "known_attack_detection_rate": 0.9671,
+    "known_attack_type_accuracy": 0.895,
+    "zero_day_detected_as_threat": 1.0,
+    "zero_day_labelled_zero_day": 0.5347,
+    "zero_day_samples": 1500,
+    "unknown_conf": 0.7,
+    "unknown_conf_sweep": [
+      {
+        "unknown_conf": 0.5,
+        "known_type_accuracy": 0.9119,
+        "known_labelled_zero_day": 0.0249,
+        "novel_labelled_zero_day": 0.24
+      },
+      {
+        "unknown_conf": 0.6,
+        "known_type_accuracy": 0.9057,
+        "known_labelled_zero_day": 0.0338,
+        "novel_labelled_zero_day": 0.396
+      },
+      {
+        "unknown_conf": 0.7,
+        "known_type_accuracy": 0.895,
+        "known_labelled_zero_day": 0.0463,
+        "novel_labelled_zero_day": 0.5347
+      },
+      {
+        "unknown_conf": 0.8,
+        "known_type_accuracy": 0.8835,
+        "known_labelled_zero_day": 0.0623,
+        "novel_labelled_zero_day": 0.898
+      },
+      {
+        "unknown_conf": 0.9,
+        "known_type_accuracy": 0.8354,
+        "known_labelled_zero_day": 0.1121,
+        "novel_labelled_zero_day": 1.0
+      }
+    ]
+  },
+  "feature_importance": [
+    {
+      "feature": "sql_kw_count",
+      "importance": 0.0636
+    },
+    {
+      "feature": "payload_len",
+      "importance": 0.0602
+    },
+    {
+      "feature": "phish_kw_count",
+      "importance": 0.059
+    },
+    {
+      "feature": "script_tag_count",
+      "importance": 0.0551
+    },
+    {
+      "feature": "src_bytes",
+      "importance": 0.0492
+    },
+    {
+      "feature": "failed_logins",
+      "importance": 0.0484
+    },
+    {
+      "feature": "beacon_interval_std",
+      "importance": 0.0479
+    },
+    {
+      "feature": "smb_write_rate",
+      "importance": 0.0456
+    },
+    {
+      "feature": "error_rate",
+      "importance": 0.0442
+    },
+    {
+      "feature": "dst_bytes",
+      "importance": 0.0438
+    },
+    {
+      "feature": "byte_ratio",
+      "importance": 0.0435
+    },
+    {
+      "feature": "special_char_ratio",
+      "importance": 0.042
+    },
+    {
+      "feature": "latency_ratio",
+      "importance": 0.0387
+    },
+    {
+      "feature": "distinct_dst_ports",
+      "importance": 0.0386
+    },
+    {
+      "feature": "payload_entropy",
+      "importance": 0.0363
+    }
+  ],
+  "model_info": {
+    "random_forest": {
+      "display": "Random Forest",
+      "approach": "Signature-style supervised (bagged trees)",
+      "complexity": "Train O(T\u00b7n\u00b7log n\u00b7\u221ad) \u00b7 Infer O(T\u00b7depth)"
+    },
+    "gradient_boosting": {
+      "display": "Gradient Boosting (HistGB)",
+      "approach": "Supervised boosted trees",
+      "complexity": "Train O(T\u00b7n\u00b7d) histogram-based \u00b7 Infer O(T\u00b7depth)"
+    },
+    "neural_network": {
+      "display": "Neural Network (MLP)",
+      "approach": "Behavioral analysis (learned non-linear features)",
+      "complexity": "Train O(epochs\u00b7n\u00b7\u03a3 w\u1d62w\u1d62\u208a\u2081) \u00b7 Infer O(\u03a3 w\u1d62w\u1d62\u208a\u2081)"
+    },
+    "ensemble": {
+      "display": "Weighted Ensemble",
+      "approach": "Hybrid (CV-weighted soft voting)",
+      "complexity": "Sum of member costs"
+    },
+    "autoencoder": {
+      "display": "Autoencoder",
+      "approach": "Anomaly detection (unsupervised, zero-day)",
+      "complexity": "Train O(epochs\u00b7n\u00b7\u03a3 w\u1d62w\u1d62\u208a\u2081) \u00b7 Infer O(\u03a3 w\u1d62w\u1d62\u208a\u2081)"
+    }
+  },
+  "environment": {
+    "python": "3.12.3",
+    "sklearn": "1.8.0",
+    "xgboost": false,
+    "lightgbm": false
+  },
+  "training_seconds": 256.7
+}

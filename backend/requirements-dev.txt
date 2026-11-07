@@ -1,0 +1,3 @@
+-r requirements.txt
+httpx>=0.27     # FastAPI TestClient
+pytest>=8.0     # optional: the tests also run with `python -m unittest`

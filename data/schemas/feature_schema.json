@@ -1,0 +1,15 @@
+{
+  "description": "Columns understood by the upload endpoint. Missing columns fall back to typical-traffic defaults. Aliases (e.g. CICIDS2017 headers) are mapped automatically.",
+  "addressing": {"ts": "unix seconds, unix ms, or ISO-8601", "src_ip": "string", "dst_ip": "string", "protocol": "TCP|UDP|ICMP", "payload_sample": "request target / URL text; inspected by signature rules and text features", "label": "optional ground truth; enables accuracy evaluation"},
+  "features": {
+    "duration": "seconds", "dst_port": "int", "src_bytes": "bytes client->server", "dst_bytes": "bytes server->client",
+    "src_pkts": "packets", "dst_pkts": "packets", "conn_count_src": "connections from this source in a 60 s window (computed from src_ip when absent)",
+    "distinct_dst_ports": "distinct ports contacted in window (computed when absent)", "distinct_dst_hosts": "distinct hosts contacted in window (computed when absent)",
+    "failed_logins": "count", "error_rate": "0-1 share of connections ending in error/RST", "syn_ratio": "0-1 share of SYN-only packets",
+    "payload_len": "derived from payload_sample", "payload_entropy": "derived from payload_sample, bits/char", "special_char_ratio": "derived", "sql_kw_count": "derived", "script_tag_count": "derived",
+    "has_ip_url": "derived", "phish_kw_count": "derived", "domain_age_days": "from threat-intel enrichment (default 1800)", "cert_mismatch": "0/1 TLS certificate mismatch",
+    "latency_ratio": "observed RTT / baseline RTT", "off_hours": "0/1 outside business hours", "unusual_dest": "0/1 destination rarely contacted by this host",
+    "smb_write_rate": "SMB writes per second", "beacon_interval_std": "std-dev of inter-connection interval (s); low = machine-regular", "dns_query_rate": "DNS queries per second"
+  },
+  "derived_automatically": ["bytes_per_sec", "pkts_per_sec", "avg_pkt_size", "byte_ratio"]
+}
