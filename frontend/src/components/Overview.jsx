@@ -16,12 +16,12 @@ function Heatmap({ cells }) {
       <div className="heat" role="img" aria-label="Attack heatmap by type and hour of day (UTC)">
         <span />
         {Array.from({ length: 24 }, (_, h) => <span key={h} className="muted" style={{ textAlign: 'center' }}>{h % 3 === 0 ? h : ''}</span>)}
-        {types.map((t) => (
+        {types.map((t, row) => (
           <React.Fragment key={t}>
             <span className="lab" title={t}>{t}</span>
             {Array.from({ length: 24 }, (_, h) => {
               const v = grid[`${t}|${h}`] || 0
-              return <span key={h} className="cell" title={`${t} @ ${h}:00 UTC: ${v}`} style={v ? { background: `rgba(var(--heat-rgb),${0.18 + 0.82 * (v / max)})` } : undefined} />
+              return <span key={h} className={`cell ${v ? 'has-events' : ''}`} title={`${t} @ ${h}:00 UTC: ${v}`} style={{ '--heat-delay': `${(row * 24 + h) * 8}ms`, ...(v ? { background: `rgba(var(--heat-rgb),${0.18 + 0.82 * (v / max)})` } : {}) }} />
             })}
           </React.Fragment>
         ))}
@@ -117,8 +117,8 @@ export default function Overview({ user, live, openAlert, goTo, scope = 'all', s
               <ResponsiveContainer><AreaChart data={series}>
                 <CartesianGrid stroke={c.grid} vertical={false} /><XAxis dataKey="t" hide /><YAxis stroke={c.axis} fontSize={11} width={50} />
                 <Tooltip {...c.tip} /><Legend />
-                <Area dataKey="normal" name="Normal" stroke={c.ice} fill={c.ice} fillOpacity={0.16} strokeWidth={1.6} isAnimationActive={false} />
-                <Area dataKey="threat" name="Threat" stroke={c.danger} fill={c.danger} fillOpacity={0.32} strokeWidth={1.6} isAnimationActive={false} />
+                <Area dataKey="normal" name="Normal" stroke={c.ice} fill={c.ice} fillOpacity={0.16} strokeWidth={1.8} isAnimationActive animationDuration={850} animationEasing="ease-out" />
+                <Area dataKey="threat" name="Threat" stroke={c.danger} fill={c.danger} fillOpacity={0.24} strokeWidth={2} isAnimationActive animationDuration={950} animationEasing="ease-out" />
               </AreaChart></ResponsiveContainer>)}
           </div>
         </Card>
@@ -127,8 +127,8 @@ export default function Overview({ user, live, openAlert, goTo, scope = 'all', s
             <ResponsiveContainer><LineChart data={fcData}>
               <CartesianGrid stroke={c.grid} vertical={false} /><XAxis dataKey="hour" stroke={c.axis} fontSize={11} /><YAxis stroke={c.axis} fontSize={11} width={30} allowDecimals={false} />
               <Tooltip {...c.tip} /><Legend />
-              <Line dataKey="threats" name="Observed" stroke={c.danger} strokeWidth={2} dot={false} connectNulls />
-              <Line dataKey="forecast" name="Forecast" stroke={c.accent} strokeWidth={2} strokeDasharray="5 4" dot connectNulls />
+              <Line dataKey="threats" name="Observed" stroke={c.danger} strokeWidth={2.2} dot={false} connectNulls isAnimationActive animationDuration={850} animationEasing="ease-out" />
+              <Line dataKey="forecast" name="Forecast" stroke={c.accent} strokeWidth={2.2} strokeDasharray="5 4" dot connectNulls isAnimationActive animationDuration={1050} animationEasing="ease-out" />
             </LineChart></ResponsiveContainer>
           </div>
         </Card>
@@ -136,7 +136,7 @@ export default function Overview({ user, live, openAlert, goTo, scope = 'all', s
           <div className="chart">
             {sev.length === 0 ? <Empty>No threats yet.</Empty> : (
               <ResponsiveContainer><PieChart>
-                <Pie data={sev} dataKey="value" nameKey="name" innerRadius={55} outerRadius={85} paddingAngle={3}>{sev.map((s) => <Cell key={s.name} fill={SEV_COLOR[s.name]} />)}</Pie>
+                <Pie data={sev} dataKey="value" nameKey="name" innerRadius={55} outerRadius={85} paddingAngle={3} isAnimationActive animationDuration={900} animationEasing="ease-out">{sev.map((s) => <Cell key={s.name} fill={SEV_COLOR[s.name]} />)}</Pie>
                 <Tooltip {...c.tip} /><Legend />
               </PieChart></ResponsiveContainer>)}
           </div>
@@ -147,7 +147,7 @@ export default function Overview({ user, live, openAlert, goTo, scope = 'all', s
               <ResponsiveContainer><BarChart data={ov.by_attack} layout="vertical" margin={{ left: 10 }}>
                 <CartesianGrid stroke={c.grid} horizontal={false} /><XAxis type="number" stroke={c.axis} fontSize={11} allowDecimals={false} /><YAxis type="category" dataKey="name" stroke={c.text} fontSize={11} width={130} />
                 <Tooltip {...c.tip} cursor={{ fill: 'rgba(127,127,127,.12)' }} />
-                <Bar dataKey="value" radius={[0, 4, 4, 0]}>{ov.by_attack.map((_, i) => <Cell key={i} fill={PALETTE[i % PALETTE.length]} />)}</Bar>
+                <Bar dataKey="value" radius={[0, 5, 5, 0]} isAnimationActive animationDuration={800} animationEasing="ease-out">{ov.by_attack.map((_, i) => <Cell key={i} fill={PALETTE[i % PALETTE.length]} />)}</Bar>
               </BarChart></ResponsiveContainer>)}
           </div>
         </Card>

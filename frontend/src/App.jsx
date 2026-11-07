@@ -47,6 +47,52 @@ function Console({ user, onLogout, onSession }) {
   const feedLabel = live.status === 'live' ? 'Feed connected' : STATUS_TEXT[live.status] || live.status
   const training = train?.state === 'running'
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'auto' }) }, [view])  // every page opens at the top
+  // A single passive scroll listener drives the console's layered background parallax.
+  useEffect(() => {
+    const shell = document.querySelector('.shell')
+    if (!shell) return undefined
+    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    if (reduce) return undefined
+    let frame = 0
+    const paint = () => {
+      frame = 0
+      const shift = Math.min(window.scrollY * 0.08, 110)
+      shell.style.setProperty('--parallax-grid', `${(-shift * 0.28).toFixed(1)}px`)
+      shell.style.setProperty('--parallax-glow', `${(-shift * 0.72).toFixed(1)}px`)
+    }
+    const onScroll = () => { if (!frame) frame = window.requestAnimationFrame(paint) }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('resize', onScroll, { passive: true })
+    onScroll()
+    return () => { window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', onScroll); if (frame) window.cancelAnimationFrame(frame) }
+  }, [])
+  // Pointer lighting is delegated so newly rendered cards and tabs participate automatically.
+  useEffect(() => {
+    const shell = document.querySelector('.shell')
+    if (!shell || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return undefined
+    let active = null, frame = 0, latest = null
+    const clear = () => {
+      active?.style.removeProperty('--pointer-x'); active?.style.removeProperty('--pointer-y'); active = null
+    }
+    const onMove = (event) => {
+      latest = event
+      if (frame) return
+      frame = window.requestAnimationFrame(() => {
+        frame = 0
+        const panel = latest.target.closest?.('.card, .src-card')
+        if (!panel || !shell.contains(panel)) { clear(); return }
+        if (active !== panel) clear()
+        active = panel
+        const rect = panel.getBoundingClientRect()
+        panel.style.setProperty('--pointer-x', `${latest.clientX - rect.left}px`)
+        panel.style.setProperty('--pointer-y', `${latest.clientY - rect.top}px`)
+      })
+    }
+    const onLeave = (event) => { if (!shell.contains(event.relatedTarget)) clear() }
+    shell.addEventListener('pointermove', onMove, { passive: true })
+    shell.addEventListener('pointerleave', onLeave)
+    return () => { shell.removeEventListener('pointermove', onMove); shell.removeEventListener('pointerleave', onLeave); if (frame) window.cancelAnimationFrame(frame); clear() }
+  }, [])
   const reloadCov = useCallback(async () => { try { setCov(await api.coverage()) } catch { /* transient */ } }, [])
   useEffect(() => { reloadCov(); const id = setInterval(reloadCov, 10000); return () => clearInterval(id) }, [reloadCov])
   const scopeProps = { scope, scopePref, setScopePref, mode, cov }
@@ -74,7 +120,7 @@ function Console({ user, onLogout, onSession }) {
             {g.items.map((n) => {
               const allowed = canAct(user, n.role)
               return (
-                <button key={n.id} className={`nav ${view === n.id ? 'active' : ''} ${allowed ? '' : 'locked'}`} disabled={!allowed}
+                <button key={n.id} className={`nav ${view === n.id ? 'active' : ''} ${allowed ? '' : 'locked'}`} aria-current={view === n.id ? 'page' : undefined} disabled={!allowed}
                   title={allowed ? n.label : `${n.label} requires the ${roleLabel(n.role)} role (you are signed in as ${roleLabel(user.role)})`} onClick={() => setView(n.id)}>
                   <n.icon size={17} /> <span className="nav-label">{n.label}</span>
                   {!allowed && <Lock size={12} className="lock" />}
@@ -111,7 +157,7 @@ function Console({ user, onLogout, onSession }) {
           </div>
         </header>
         <ErrorBoundary resetKey={view}>
-          <div className="page" key={view}>
+          <div className="page" data-view={view} key={view}>
           {view === 'overview' && <Overview user={user} live={live} openAlert={openAlert} goTo={setView} {...scopeProps} />}
           {view === 'alerts' && <Alerts user={user} focusId={focusAlert} clearFocus={() => setFocusAlert(null)} {...scopeProps} />}
           {view === 'sources' && <Sources user={user} cov={cov} reloadCov={reloadCov} goTo={setView} />}
