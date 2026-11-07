@@ -911,6 +911,62 @@ pre.code{background:var(--code);border:1px solid var(--border);border-radius:14p
   .shell .page[data-view="upload"]>.grid.g2,.shell .page[data-view="admin"]>.grid.g2,
   .shell .page[data-view="account"]>.grid.g2{grid-template-columns:minmax(0,1fr)}
 }
+
+/* Desktop keeps the grouped operations rail; its navigation controls borrow the reference's tactile pill motion. */
+.shell .sidebar .nav-section{display:contents}
+.shell .sidebar .nav{overflow:hidden;isolation:isolate}
+.shell .sidebar .nav::before{content:'';position:absolute;inset:0;z-index:-1;border-radius:inherit;background:linear-gradient(100deg,color-mix(in srgb,var(--accent) 10%,transparent),transparent 72%);opacity:0;transform:translateX(-8px);transition:opacity .28s var(--ease),transform .38s var(--ease)}
+.shell .sidebar .nav:hover::before,.shell .sidebar .nav.active::before{opacity:1;transform:translateX(0)}
+.shell .sidebar .nav.active::after{transition:top .35s var(--ease),height .35s var(--ease),box-shadow .3s}
+.shell .sidebar .nav:hover:not(:disabled) svg{transform:translateX(3px) scale(1.04)}
+.shell .mobile-nav-more{display:none}
+@media(max-width:820px){
+  .shell .sidebar{
+    left:.45rem;right:.45rem;width:auto;height:64px;max-height:72svh;
+    flex-direction:row;flex-wrap:nowrap;align-items:center;justify-content:space-between;
+    gap:.3rem;overflow:hidden;padding:.45rem .55rem;
+    border:1px solid var(--console-line);border-bottom:0;border-radius:20px 20px 0 0;
+    background:color-mix(in srgb,var(--bg2) 95%,transparent);
+    box-shadow:0 -16px 42px -30px color-mix(in srgb,var(--text) 52%,transparent),inset 0 1px 0 rgba(var(--ink-rgb),.06);
+    transition:height .56s cubic-bezier(.22,1,.36,1),border-radius .42s var(--ease),box-shadow .4s var(--ease),background-color .3s;
+  }
+  .shell .sidebar .brand,.shell .sidebar .side-foot,.shell .sidebar .nav-group{display:none}
+  .shell .sidebar .nav-section{display:contents}
+  .shell .sidebar .nav{display:none;width:auto;min-width:0;flex:1 1 0;justify-content:center;gap:.45rem;padding:.62rem .5rem;white-space:nowrap}
+  .shell .sidebar .nav[data-nav-id="overview"],.shell .sidebar .nav[data-nav-id="alerts"],.shell .sidebar .nav[data-nav-id="sources"]{display:flex}
+  .shell .sidebar .nav.active{box-shadow:inset 0 -2px 0 var(--accent)}
+  .shell .sidebar .mobile-nav-more{
+    display:flex;flex:none;align-items:center;justify-content:center;gap:.5rem;min-width:76px;height:44px;
+    padding:0 .9rem;border:1px solid var(--console-line);border-radius:13px;
+    background:color-mix(in srgb,var(--panel) 84%,transparent);color:var(--text);
+    font:600 .82rem var(--font);cursor:pointer;
+    transition:background .24s,border-color .24s,transform .3s var(--ease),color .2s;
+  }
+  .shell .sidebar .mobile-nav-more:hover{background:color-mix(in srgb,var(--accent) 10%,var(--panel));border-color:color-mix(in srgb,var(--accent) 30%,var(--border-strong))}
+  .shell .sidebar .mobile-nav-more:active{transform:scale(.97)}
+  .shell .sidebar.mobile-open{
+    height:min(72svh,560px);flex-direction:column;flex-wrap:nowrap;align-items:stretch;justify-content:flex-start;
+    gap:.35rem;overflow-y:auto;padding:.85rem .8rem .7rem;border-radius:22px 22px 0 0;
+    box-shadow:0 -30px 70px -38px rgba(0,0,0,.55),inset 0 1px 0 rgba(var(--ink-rgb),.08);
+  }
+  .shell .sidebar.mobile-open .brand{display:flex;flex:none;padding:.1rem .45rem .65rem}
+  .shell .sidebar.mobile-open .nav-section{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.25rem .4rem;width:100%;flex:none}
+  .shell .sidebar.mobile-open .nav-group{display:block;grid-column:1/-1;padding:.55rem .55rem .15rem}
+  .shell .sidebar.mobile-open .nav{display:flex;width:100%;min-width:0;flex:none;justify-content:flex-start;padding:.65rem .7rem}
+  .shell .sidebar.mobile-open .nav[data-nav-id="overview"],.shell .sidebar.mobile-open .nav[data-nav-id="alerts"],.shell .sidebar.mobile-open .nav[data-nav-id="sources"]{display:flex}
+  .shell .sidebar.mobile-open .nav-label{display:inline}
+  .shell .sidebar.mobile-open .mobile-nav-more{order:3;flex:none;width:100%;justify-content:space-between;margin-top:.2rem}
+  .shell .sidebar.mobile-open .side-foot{display:flex;order:4;flex:none;width:100%;margin-top:.2rem;padding-top:.55rem;border-top:1px solid var(--console-line)}
+  .shell .sidebar.mobile-open .account-controls{display:grid;grid-template-columns:1fr;gap:.45rem}
+}
+@media(max-width:420px){
+  .shell .sidebar:not(.mobile-open) .nav-label{display:none}
+  .shell .sidebar:not(.mobile-open) .nav{gap:0}
+  .shell .sidebar:not(.mobile-open) .mobile-nav-more{min-width:68px;padding:0 .65rem}
+}
+@media(prefers-reduced-motion:reduce){
+  .shell .sidebar,.shell .sidebar .nav::before,.shell .sidebar .nav.active::after,.shell .mobile-nav-more{transition:none!important}
+}
 @media(max-width:560px){
   .shell .page[data-view="alerts"]>.card>.row:first-child select{flex:1 1 130px}
   .shell .page[data-view="models"]>.stats{grid-template-columns:repeat(2,minmax(0,1fr))}

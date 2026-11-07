@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import { Activity, BellRing, Brain, Lock, LogOut, Moon, Plug, Settings, Sun, Upload as UploadIcon } from 'lucide-react'
+import { Activity, BellRing, Brain, ChevronDown, ChevronUp, Lock, LogOut, Moon, Plug, Settings, Sun, Upload as UploadIcon } from 'lucide-react'
 import { api, getToken, onUnauthorized, setToken } from './api'
 import { BRAND, roleLabel } from './brand'
 import { useTheme } from './theme'
@@ -32,6 +32,7 @@ const STATUS_TEXT = { live: 'Live', connecting: 'Connecting…', reconnecting: '
 function Console({ user, onLogout, onSession }) {
   const { theme, toggle } = useTheme()
   const [view, setView] = useState('overview')
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [focusAlert, setFocusAlert] = useState(null)
   const [train, setTrain] = useState(null)
   const [cov, setCov] = useState(null)               // coverage + Demo/Live mode, refreshed regularly
@@ -44,6 +45,13 @@ function Console({ user, onLogout, onSession }) {
   const dot = live.status === 'live' ? 'live' : live.status === 'unauthorised' ? 'bad' : ''
   const feedLabel = live.status === 'live' ? 'Feed connected' : STATUS_TEXT[live.status] || live.status
   const training = train?.state === 'running'
+  useEffect(() => { setMobileNavOpen(false) }, [view])
+  useEffect(() => {
+    if (!mobileNavOpen) return undefined
+    const closeOnEscape = (event) => { if (event.key === 'Escape') setMobileNavOpen(false) }
+    window.addEventListener('keydown', closeOnEscape)
+    return () => window.removeEventListener('keydown', closeOnEscape)
+  }, [mobileNavOpen])
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'auto' }) }, [view])  // every page opens at the top
   // A single passive scroll listener drives the console's layered background parallax.
   useEffect(() => {
@@ -110,25 +118,28 @@ function Console({ user, onLogout, onSession }) {
 
   return (
     <div className="shell">
-      <nav className="sidebar" aria-label="Main">
+      <nav id="argus-mobile-nav" className={`sidebar ${mobileNavOpen ? 'mobile-open' : ''}`} aria-label="Main">
         <div className="brand"><Logo size={36} /><span>{BRAND.name}<small>Threat intelligence</small></span></div>
         {GROUPS.map((g) => (
-          <React.Fragment key={g.label}>
+          <div className="nav-section" key={g.label}>
             <div className="nav-group">{g.label}</div>
             {g.items.map((n) => {
               const allowed = canAct(user, n.role)
               return (
-                <button key={n.id} className={`nav ${view === n.id ? 'active' : ''} ${allowed ? '' : 'locked'}`} aria-current={view === n.id ? 'page' : undefined} disabled={!allowed}
-                  title={allowed ? n.label : `${n.label} requires the ${roleLabel(n.role)} role (you are signed in as ${roleLabel(user.role)})`} onClick={() => setView(n.id)}>
+                <button key={n.id} data-nav-id={n.id} className={`nav ${view === n.id ? 'active' : ''} ${allowed ? '' : 'locked'}`} aria-label={n.label} aria-current={view === n.id ? 'page' : undefined} disabled={!allowed}
+                  title={allowed ? n.label : `${n.label} requires the ${roleLabel(n.role)} role (you are signed in as ${roleLabel(user.role)})`} onClick={() => { setView(n.id); setMobileNavOpen(false) }}>
                   <n.icon size={17} /> <span className="nav-label">{n.label}</span>
                   {!allowed && <Lock size={12} className="lock" />}
                   {n.id === 'models' && training && <span className="pulse" title="Model training in progress" />}
                 </button>)
             })}
-          </React.Fragment>))}
+          </div>))}
+        <button className="mobile-nav-more" onClick={() => setMobileNavOpen((open) => !open)} aria-label={mobileNavOpen ? 'Close navigation menu' : 'Open more navigation options'} aria-expanded={mobileNavOpen} aria-controls="argus-mobile-nav">
+          {mobileNavOpen ? <><span>Close menu</span><ChevronDown size={16} /></> : <><span>More</span><ChevronUp size={16} /></>}
+        </button>
         <div className="side-foot">
           <div className="account-controls">
-            <button className="user-card" onClick={() => setView('account')} title="Open your account" aria-label="Open your account">
+            <button className="user-card" onClick={() => { setView('account'); setMobileNavOpen(false) }} title="Open your account" aria-label="Open your account">
               <Avatar user={user} />
               <span className="who"><b>{user.full_name || user.username}</b><RoleBadge role={user.role} /></span>
             </button>
