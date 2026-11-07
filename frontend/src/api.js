@@ -81,7 +81,6 @@ export const api = {
   mitigations: () => request('/api/mitigations'),
   unblock: (ip) => request(`/api/blocklist/${encodeURIComponent(ip)}`, { method: 'DELETE' }),
   detectEvent: (b) => request('/api/detect/event', { method: 'POST', body: b }),
-  labSimulate: (scenario) => request('/api/lab/simulate', { method: 'POST', body: { scenario } }),
   upload: (file) => { const f = new FormData(); f.append('file', file); return request('/api/detect/upload', { method: 'POST', form: f }) },
   jobs: () => request('/api/detect/jobs'),
   job: (id) => request(`/api/detect/jobs/${id}`),

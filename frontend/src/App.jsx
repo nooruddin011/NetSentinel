@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import { Activity, BellRing, Brain, FlaskConical, Lock, LogOut, Moon, Plug, Settings, Sun, Upload as UploadIcon } from 'lucide-react'
+import { Activity, BellRing, Brain, Lock, LogOut, Moon, Plug, Settings, Sun, Upload as UploadIcon } from 'lucide-react'
 import { api, getToken, onUnauthorized, setToken } from './api'
 import { BRAND, roleLabel } from './brand'
 import { useTheme } from './theme'
@@ -11,7 +11,6 @@ import Alerts from './components/Alerts'
 import Models from './components/Models'
 import Sources from './components/Sources'
 import Upload from './components/Upload'
-import Lab from './components/Lab'
 import Admin from './components/Admin'
 import Account from './components/Account'
 import Chatbot from './components/Chatbot'
@@ -25,8 +24,7 @@ const GROUPS = [
     { id: 'sources', label: 'Sources', icon: Plug, role: 'viewer' }] },
   { label: 'Analyse', items: [
     { id: 'models', label: 'Models', icon: Brain, role: 'viewer' },
-    { id: 'upload', label: 'Upload & Analyse', icon: UploadIcon, role: 'analyst' },
-    { id: 'lab', label: 'Attack Lab', icon: FlaskConical, role: 'analyst' }] },
+    { id: 'upload', label: 'Upload & Analyse', icon: UploadIcon, role: 'analyst' }] },
   { label: 'Manage', items: [{ id: 'admin', label: 'Admin', icon: Settings, role: 'admin' }] },
 ]
 const STATUS_TEXT = { live: 'Live', connecting: 'Connecting…', reconnecting: 'Reconnecting…', unauthorised: 'Not authorised' }
@@ -163,7 +161,6 @@ function Console({ user, onLogout, onSession }) {
           {view === 'sources' && <Sources user={user} cov={cov} reloadCov={reloadCov} goTo={setView} />}
           {view === 'models' && <Models user={user} train={train} setTrain={setTrain} />}
           {view === 'upload' && <Upload user={user} />}
-          {view === 'lab' && <Lab user={user} openAlert={openAlert} />}
           {view === 'admin' && canAct(user, 'admin') && <Admin user={user} />}
           {view === 'account' && <Account user={user} onSession={onSession} onLogout={onLogout} />}
           </div>

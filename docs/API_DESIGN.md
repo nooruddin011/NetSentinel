@@ -41,7 +41,6 @@ Base URL `http://localhost:8000` (dev; the Vite proxy forwards `/api` and `/ws`)
 | POST | `/api/ingest/events` | API key | **The door.** Collector sends a batch of web events (max 500). Auth: `X-Argus-Key` or `Authorization: Bearer agk_...` (a dashboard JWT is rejected). 401 bad key, 413 too large, 429 rate-limited |
 | POST | `/api/ingest/heartbeat` | API key | Collector liveness (every ~30 s); returns the current privacy policy |
 | GET | `/api/ingest/policy` | API key | Collector fetches its privacy policy at start-up |
-| POST | `/api/lab/simulate` | Analyst | Inject a simulated attack scenario; the detector receives no label |
 | GET | `/api/mitigations` | Viewer | Applied mitigations and the simulated blocklist |
 | GET | `/api/models/active` | Viewer | Full report of the active training run |
 | POST | `/api/models/retrain` | Admin | Start background retraining + hot-swap (202); 409 if already running |

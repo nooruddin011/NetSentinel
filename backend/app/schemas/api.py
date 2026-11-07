@@ -7,9 +7,6 @@ from typing import Literal, Optional
 from pydantic import BaseModel, Field, field_validator
 
 from app.ml.schema import RAW_FEATURES
-from app.models.attacks import ATTACKS
-
-AttackName = Literal[tuple(ATTACKS)]  # type: ignore[valid-type]
 Role = Literal["viewer", "analyst", "admin"]
 Status = Literal["open", "acknowledged", "mitigated", "resolved", "false_positive"]
 USERNAME_RE = re.compile(r"^[A-Za-z0-9_.@-]{3,64}$")
@@ -96,11 +93,6 @@ class DetectEvent(BaseModel):
         if len(v) > 64:
             raise ValueError("too many features")
         return {k: float(x) for k, x in v.items() if k in RAW_FEATURES}
-
-
-class SimulateRequest(BaseModel):
-    scenario: AttackName
-    stealth: float = Field(default=0.0, ge=0.0, le=1.0)
 
 
 class ChatRequest(BaseModel):

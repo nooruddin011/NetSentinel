@@ -1,5 +1,5 @@
 """EventProcessor: normalise -> analyse -> persist -> notify. The single entry point for every event
-source (live simulator, attack lab, API, file upload)."""
+source (live simulator, API, file upload, and connected sources)."""
 from __future__ import annotations
 
 import logging

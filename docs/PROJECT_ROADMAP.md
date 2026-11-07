@@ -11,7 +11,7 @@
 - [x] JWT auth, self-registration (Viewer by default), 3 roles, Admin console (create / reset password / disable / delete users, settings, system status, audit), lockout, hardened inputs/outputs, per-user upload history
 - [x] Light/dark themes, new identity (Argus), account page, toasts/confirm dialogs, training progress that survives page changes
 - [x] Upload analysis (CSV, CICIDS headers, optional labels → live accuracy), NSL-KDD adapter
-- [x] Dashboard: live charts, heatmap, forecast, alerts workflow, model comparison, attack lab, chatbot, PDF/CSV reports, email alerts
+- [x] Dashboard: live charts, heatmap, forecast, alerts workflow, model comparison, chatbot, PDF/CSV reports, email alerts
 - [x] Docker, docs, unit + integration tests
 
 - [x] **Real-time connector architecture**: collector, parser, API-keyed ingest door, privacy policy, source health, Demo/Live modes, Coverage panel

@@ -145,7 +145,7 @@ export default function Alerts({ user, focusId, clearFocus, scope = 'all', scope
           {data.alerts.map((a) => (
             <tr key={a.id} className="click" onClick={() => setOpen(a.id)}>
               <td>{a.id}</td><td className="nowrap">{fmtShort(a.last_seen)}</td><td className="nowrap"><strong>{a.attack_type}</strong></td><td><SevBadge severity={a.severity} /></td><td>{a.risk_score}</td>
-              <td className="mono nowrap">{a.src_ip}{a.dst_ip && a.dst_ip !== '0.0.0.0' ? ` → ${a.dst_ip}` : ''}</td><td className="muted nowrap" style={{ fontSize: '.8rem' }}>{a.source_name || (a.origin === 'upload' ? 'Upload' : a.origin === 'lab' ? 'Attack Lab' : a.origin === 'connector' ? '(deleted source)' : 'Simulated')}</td><td>{a.count}</td><td><StatusBadge status={a.status} /></td>
+              <td className="mono nowrap">{a.src_ip}{a.dst_ip && a.dst_ip !== '0.0.0.0' ? ` → ${a.dst_ip}` : ''}</td><td className="muted nowrap" style={{ fontSize: '.8rem' }}>{a.source_name || (a.origin === 'upload' ? 'Upload' : a.origin === 'lab' ? 'Simulated test (legacy)' : a.origin === 'connector' ? '(deleted source)' : 'Simulated')}</td><td>{a.count}</td><td><StatusBadge status={a.status} /></td>
             </tr>))}
           {data.alerts.length === 0 && <tr><td colSpan="9" className="empty">No alerts match.</td></tr>}
         </tbody></table></div>

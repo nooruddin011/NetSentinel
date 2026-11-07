@@ -1,8 +1,7 @@
 """Live traffic simulator: produces a realistic stream of benign flows with attack campaigns mixed in.
 
 Events are generated from the same feature distributions the models were trained on but they carry NO
-label into the detector -- the pipeline must classify them. The ground-truth label is returned
-separately so the Attack Lab can show whether the platform got it right.
+label into the detector -- the pipeline must classify them.
 """
 from __future__ import annotations
 
@@ -29,12 +28,11 @@ class TrafficSimulator:
         w = np.array([ATTACK_WEIGHTS[n] for n in names], dtype=float)
         self._names, self._p = names, w / w.sum()
 
-    def next_event(self, scenario: str | None = None) -> tuple:
-        """Return (raw_event, ground_truth_label). `scenario` forces a specific class."""
+    def next_event(self) -> dict:
+        """Return one raw event with no ground-truth label attached."""
         with self._lock:
-            if scenario is None:
-                is_attack = self.rng.random() < self.attack_ratio
-                scenario = str(self.rng.choice(self._names, p=self._p)) if is_attack else BENIGN
+            is_attack = self.rng.random() < self.attack_ratio
+            scenario = str(self.rng.choice(self._names, p=self._p)) if is_attack else BENIGN
             ip = None
             if scenario != BENIGN:
                 if scenario in self._attackers and self.rng.random() < 0.6:
@@ -43,4 +41,4 @@ class TrafficSimulator:
             if scenario != BENIGN:
                 self._attackers[scenario] = ev["src_ip"]
         ev["ts"] = time.time()
-        return ev, scenario
+        return ev

@@ -856,11 +856,12 @@ pre.code{background:var(--code);border:1px solid var(--border);border-radius:14p
 .shell .page[data-view="overview"]>.note,
 .shell .page[data-view="overview"]>.overview-bento-grid,
 .shell .page[data-view="overview"]>.overview-tables{grid-column:1/-1}
-.shell .page[data-view="overview"]>.overview-heatmap{grid-column:span 7;min-width:0;margin:0}
-.shell .page[data-view="overview"]>.overview-metrics{grid-column:span 5;min-width:0;margin:0 0 1rem}
-.shell .page[data-view="overview"]>.overview-metrics .stats{grid-template-columns:repeat(2,minmax(0,1fr));height:100%}
-.shell .page[data-view="overview"]>.overview-metrics .stat{padding:.72rem .8rem;border-right:0;border-bottom:1px solid var(--console-line)}
-.shell .page[data-view="overview"]>.overview-metrics .stat:nth-last-child(-n+2){border-bottom:0}
+.shell .page[data-view="overview"]>.overview-heatmap{grid-column:1/-1;min-width:0;margin:0}
+.shell .page[data-view="overview"]>.overview-metrics{grid-column:1/-1;min-width:0;margin:0 0 1rem}
+.shell .page[data-view="overview"]>.overview-metrics .stats{grid-template-columns:repeat(3,minmax(0,1fr));height:100%}
+.shell .page[data-view="overview"]>.overview-metrics .stat{padding:.72rem .8rem;border-right:1px solid var(--console-line);border-bottom:1px solid var(--console-line)}
+.shell .page[data-view="overview"]>.overview-metrics .stat:nth-child(3n){border-right:0}
+.shell .page[data-view="overview"]>.overview-metrics .stat:nth-last-child(-n+3){border-bottom:0}
 .shell .page[data-view="overview"]>.overview-heatmap .card,
 .shell .page[data-view="overview"]>.overview-metrics{height:100%;min-height:220px}
 .shell .overview-bento-grid{grid-template-columns:repeat(12,minmax(0,1fr));margin:0 0 1rem}
@@ -900,9 +901,6 @@ pre.code{background:var(--code);border:1px solid var(--border);border-radius:14p
 .shell .page[data-view="models"]>.stats .stat{background:linear-gradient(145deg,color-mix(in srgb,var(--accent) 8%,var(--panel)),var(--panel) 72%)}
 .shell .page[data-view="models"]>.tabs{margin:.25rem 0 1rem}
 .shell .page[data-view="models"]>.grid{grid-template-columns:minmax(0,1.15fr) minmax(300px,.85fr);align-items:start}
-.shell .page[data-view="lab"]>.grid.g2{grid-template-columns:minmax(0,1.12fr) minmax(320px,.88fr);align-items:start}
-.shell .page[data-view="lab"]>.grid.g2>.card:first-child{border-top:3px solid color-mix(in srgb,var(--ice) 60%,var(--border))}
-.shell .page[data-view="lab"]>.grid.g2>.card:last-child{border-top:3px solid color-mix(in srgb,var(--accent) 60%,var(--border))}
 .shell .page[data-view="upload"]>.drop{min-height:210px;display:flex;flex-direction:column;justify-content:center;align-items:center;max-width:none;padding:2rem clamp(1rem,5vw,4rem)}
 .shell .page[data-view="upload"]>.card{margin-top:1rem}
 .shell .page[data-view="upload"]>.grid.g2{grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start}

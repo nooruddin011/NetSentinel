@@ -6,7 +6,7 @@ import re
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 
 from app.api.deps import client_ip, get_ctx, require
-from app.schemas.api import DetectEvent, SimulateRequest
+from app.schemas.api import DetectEvent
 from app.services.ingestion import loader
 
 router = APIRouter(prefix="/api", tags=["detection"])
@@ -21,18 +21,6 @@ def detect_event(body: DetectEvent, request: Request, user=Depends(require("anal
     raw.setdefault("src_ip", client_ip(request))
     out = ctx.processor.process(raw, origin="api")
     ctx.hub.publish(dict(type="event", **{k: v for k, v in out.items() if k not in ("explanation", "class_probs")}))
-    return out
-
-
-@router.post("/lab/simulate")
-def lab_simulate(body: SimulateRequest, request: Request, user=Depends(require("analyst")), ctx=Depends(get_ctx)):
-    """Inject a scenario from the traffic simulator. The detector gets NO label: it must classify it."""
-    ev, truth = ctx.simulator.next_event(body.scenario)
-    out = ctx.processor.process(ev, origin="lab")
-    out["injected_scenario"] = truth
-    out["correct"] = (out["attack_type"] == truth)
-    ctx.hub.publish(dict(type="event", **{k: v for k, v in out.items() if k not in ("explanation", "class_probs")}))
-    ctx.repo.audit(user["username"], "lab.simulate", truth, f"detected={out['attack_type']}", client_ip(request))
     return out
 
 

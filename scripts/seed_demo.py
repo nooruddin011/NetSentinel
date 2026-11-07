@@ -30,7 +30,7 @@ def main():
         hour = (now - age) % 86400 / 3600
         burst = 0.12 + 0.22 * np.exp(-((hour - 3.0) ** 2) / 8)  # a quiet-hours attack window makes the heatmap interesting
         sim.attack_ratio = float(burst)
-        raw, _ = sim.next_event()
+        raw = sim.next_event()
         raw["ts"] = now - age
         events.append(normalize_event(raw))
     events.sort(key=lambda e: e["ts"])

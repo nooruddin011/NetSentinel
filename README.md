@@ -26,7 +26,7 @@ A hybrid detection pipeline, a real-time dashboard, and a log collector that con
 
 ## Overview
 
-Argus watches a stream of security events, decides which ones are threats, and explains why. It accepts events from five places: a built-in simulator, CSV uploads, a REST API, a built-in attack lab, and an optional **collector** that streams a real web server's access log to the dashboard in real time.
+Argus watches a stream of security events, decides which ones are threats, and explains why. It accepts events from four places: a built-in simulator, CSV uploads, a REST API, and an optional **collector** that streams a real web server's access log to the dashboard in real time.
 
 Every alert comes with the evidence behind it, a risk score, and attack-specific mitigation guidance. The whole system runs locally, either with a single Docker command or as a normal Python and Node.js development setup.
 
@@ -200,7 +200,6 @@ flowchart LR
   SIM[Simulator] --> INGEST[Event ingestion]
   CSV[CSV upload] --> INGEST
   API[REST API] --> INGEST
-  LAB[Attack lab] --> INGEST
   LOG[(Web access log)] --> COL[Collector]
   COL -- "HTTPS + API key" --> DOOR[Ingest endpoint]
   DOOR --> INGEST
@@ -257,7 +256,6 @@ The web-log connector covers **SQL injection, XSS, brute force (web logins), pat
 | **Sources** | Connect and manage sources, rotate or revoke keys, and review attack coverage. |
 | **Models** | Review model metrics and per-attack performance. Admins can retrain. |
 | **Upload & Analyse** | Analyse a flow CSV (a sample is provided) and keep a private upload history. |
-| **Attack Lab** | Launch simulated attacks and test payloads against a demo shop. |
 | **Admin** | Manage users, settings, the simulator mode, mitigations, and the audit log. |
 | **Account** | Profile, light or dark theme, and password change. |
 
@@ -266,7 +264,7 @@ The web-log connector covers **SQL injection, XSS, brute force (web logins), pat
 | Role | Can do |
 | --- | --- |
 | **Viewer** | Read dashboards, alerts, models, and the PDF summary; use the assistant. Self-registered accounts are always Viewers. |
-| **Analyst** | Everything a Viewer can, plus change alert status, apply simulated mitigations, upload and analyse files, use the Attack Lab, and export CSV. |
+| **Analyst** | Everything a Viewer can, plus change alert status, apply simulated mitigations, upload and analyse files, and export CSV. |
 | **Admin** | Everything an Analyst can, plus manage users, sources, settings, simulator mode, model retraining, and view the audit log. |
 
 ---
@@ -329,7 +327,6 @@ python scripts/verify_connector_pipeline.py
 | `scripts/train_models.py` | Train the network-flow models (`--quick` for a fast run, `--csv` for your own labelled data). |
 | `scripts/train_web_model.py` | Retrain the web-request text model, optionally from your own labelled CSV. |
 | `scripts/seed_demo.py` | Add about 24 hours of simulated history so charts are populated. |
-| `scripts/simulate_attack.py` | Inject simulated attacks into a running platform through its API. |
 | `scripts/make_sample_data.py` | Generate a labelled sample CSV for the Upload page. |
 
 The frontend has no automated test suite yet. Known gaps and planned work are tracked in the [roadmap](docs/PROJECT_ROADMAP.md).

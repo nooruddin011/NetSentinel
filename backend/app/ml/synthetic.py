@@ -377,12 +377,12 @@ def generate_dataset(n: int = 15000, seed: int = 42, stealth: float = 0.2, label
     return df
 
 
-# ---------------------------------------------------------------- single events for the simulator / lab
+# ---------------------------------------------------------------- single events for the traffic simulator
 _ATTACKER_NETS = ["198.51.100", "203.0.113", "192.0.2"]  # RFC 5737 documentation ranges: never real hosts
 
 
 def generate_event(cls: str, rng, stealth: float = 0.0, attacker_ip: str | None = None) -> dict:
-    """One flow event (features + addressing + optional payload text) for the live simulator and attack lab."""
+    """One flow event (features + addressing + optional payload text) for the live simulator."""
     row = sample_class(cls, 1, rng, stealth if cls != BENIGN else 0.0).iloc[0].to_dict()
     ev = {k: float(v) for k, v in row.items()}
     payload = ""

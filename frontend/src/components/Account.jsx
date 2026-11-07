@@ -8,7 +8,7 @@ import { Avatar, Card, ErrorNote, PageHead, PasswordHelp, RoleBadge, fmtTime, pa
 
 const ROLE_INFO = {
   viewer: 'Read-only: dashboards, alerts, model metrics, reports and the assistant.',
-  analyst: 'Everything a Viewer can do, plus uploading datasets, the Attack Lab, triaging alerts and applying (simulated) mitigations.',
+  analyst: 'Everything a Viewer can do, plus uploading datasets, triaging alerts and applying (simulated) mitigations.',
   admin: 'Everything an Analyst can do, plus user management, model retraining, settings and the audit log.',
 }
 

@@ -27,7 +27,7 @@ async def _simulation_loop(ctx: AppContext):
         try:
             refresh_sim(ctx)  # Demo/Live: the simulator switches itself off while a real source is connected (Auto mode)
             if ctx.sim["enabled"] and ctx.hub.client_count:  # only burn CPU while someone is watching
-                ev, _truth = ctx.simulator.next_event()
+                ev = ctx.simulator.next_event()
                 out = await asyncio.to_thread(ctx.processor.process, ev, "stream")
                 ctx.hub.publish(dict(type="event", **{k: v for k, v in out.items() if k not in ("explanation", "class_probs")}))
             await asyncio.sleep(ctx.sim["interval"])

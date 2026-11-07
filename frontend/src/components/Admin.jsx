@@ -83,7 +83,7 @@ function Users({ me }) {
           <PasswordHelp password={form.password} username={form.username} />
           <label className="field">Role<select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>{ROLES.map((r) => <option key={r} value={r}>{roleLabel(r)}</option>)}</select></label>
           <button className="btn" disabled={!canCreate}><UserPlus size={15} /> Create user</button>
-          <div className="muted" style={{ fontSize: '.78rem' }}><RoleBadge role="viewer" /> dashboards, alerts, reports · <RoleBadge role="analyst" /> + upload, Attack Lab, triage, mitigate · <RoleBadge role="admin" /> + users, retraining, settings.</div>
+          <div className="muted" style={{ fontSize: '.78rem' }}><RoleBadge role="viewer" /> dashboards, alerts, reports · <RoleBadge role="analyst" /> + upload, triage, mitigate · <RoleBadge role="admin" /> + users, retraining, settings.</div>
         </form>
       </Card>
       {reset && <ResetPassword target={reset} onClose={() => setReset(null)} onDone={() => toast(`Password reset for ${reset.username}`)} />}

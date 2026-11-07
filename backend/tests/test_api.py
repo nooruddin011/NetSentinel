@@ -80,7 +80,7 @@ class TestAPI(unittest.TestCase):
     def test_validation(self):
         h = self.h()
         self.assertEqual(self.c.post("/api/detect/event", json={"payload_sample": "x" * 5000}, headers=h).status_code, 422)
-        self.assertEqual(self.c.post("/api/lab/simulate", json={"scenario": "NotAnAttack"}, headers=h).status_code, 422)
+        self.assertEqual(self.c.post("/api/lab/simulate", json={"scenario": "NotAnAttack"}, headers=h).status_code, 404)
         self.assertEqual(self.c.get("/api/alerts?limit=9999", headers=h).status_code, 422)
         self.assertEqual(self.c.get("/api/alerts?severity=Bogus", headers=h).status_code, 422)
         self.assertEqual(self.c.get("/api/alerts/99999999", headers=h).status_code, 404)
@@ -112,7 +112,8 @@ class TestAPI(unittest.TestCase):
         with self.c.websocket_connect("/ws/stream") as ws:
             ws.send_json({"type": "auth", "token": self.tok})
             ws.receive_json()
-            self.c.post("/api/lab/simulate", json={"scenario": "DDoS"}, headers=self.h())
+            event = self.c.post("/api/detect/event", json={"payload_sample": "' OR 1=1 --"}, headers=self.h())
+            self.assertEqual(event.status_code, 200, event.text)
             msg = ws.receive_json()
             self.assertEqual(msg["type"], "event")
 
@@ -139,7 +140,6 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(self._register("weakpw", "short").status_code, 422)
         tok = r.json()["access_token"]
         self.assertEqual(self.c.get("/api/alerts", headers=self.h(tok)).status_code, 200)
-        self.assertEqual(self.c.post("/api/lab/simulate", json={"scenario": "DDoS"}, headers=self.h(tok)).status_code, 403)
 
     def test_admin_can_create_viewer_and_analyst(self):
         for name, role in (("mk.viewer", "viewer"), ("mk.analyst", "analyst"), ("mk@mail.example", "viewer")):

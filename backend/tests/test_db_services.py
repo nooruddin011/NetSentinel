@@ -129,9 +129,10 @@ class TestChatReportsAnalytics(unittest.TestCase):
     def setUpClass(cls):
         cls.ctx = make_ctx()
         for _ in range(60):
-            e, _t = cls.ctx.simulator.next_event()
+            e = cls.ctx.simulator.next_event()
             cls.ctx.processor.process(e)
-        cls.ctx.processor.process(cls.ctx.simulator.next_event("SQL Injection")[0])
+        from app.ml.synthetic import generate_event
+        cls.ctx.processor.process(generate_event("SQL Injection", np.random.default_rng(17)))
 
     def test_chat_intents(self):
         c = self.ctx.chat

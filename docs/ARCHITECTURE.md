@@ -6,9 +6,8 @@ flowchart LR
     SIM[Traffic simulator]:::s
     UP[CSV upload]:::s
     API[POST /detect/event]:::s
-    LAB[Attack Lab]:::s
   end
-  SIM & UP & API & LAB --> NORM[normalize_event<br/>clean + payload features]
+  SIM & UP & API --> NORM[normalize_event<br/>clean + payload features]
   NORM --> SIG[Signature engine<br/>regex / threshold rules]
   NORM --> FE[Feature engineering<br/>34 features]
   FE --> ENS[Weighted ensemble<br/>RF + GB + MLP (+XGB/LGBM)]
@@ -35,7 +34,7 @@ flowchart LR
   FUSE2 --> HUB[WebSocket hub] --> UI[Dashboard]
   DB --> COV[Coverage + source health]
 ```
-Events from connectors carry `origin = connector` and a `source_id`; simulated events carry `stream`/`seed`/`lab`. Analytics accept a `scope` (live / demo / upload / all) so real and simulated data never mix. See [CONNECTORS.md](CONNECTORS.md).
+Events from connectors carry `origin = connector` and a `source_id`; generated demo events carry `stream` or `seed`. Analytics accept a `scope` (live / demo / upload / all) so real and simulated data never mix. See [CONNECTORS.md](CONNECTORS.md).
 
 ## Layers (all under `backend/app/`)
 
@@ -55,7 +54,7 @@ Events from connectors carry `origin = connector` and a `source_id`; simulated e
 | `services/` | recommendation + mitigation, analytics (forecast), chatbot, reports (PDF/CSV), alerting, stream hub, model manager |
 | `bootstrap.py` / `factory.py` | build the object graph (framework-free) / build the FastAPI app |
 
-Every event source goes through **one** entry point (`EventProcessor`), so live traffic, uploads, API calls and the lab are detected, scored, stored and alerted identically.
+Every event source goes through **one** entry point (`EventProcessor`), so live traffic, uploads, API calls and simulator events are detected, scored, stored and alerted identically.
 
 ## Detection flow for one event
 

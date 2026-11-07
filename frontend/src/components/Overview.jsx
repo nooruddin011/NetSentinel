@@ -164,7 +164,7 @@ export default function Overview({ user, live, openAlert, goTo, scope = 'all', s
           <div className="table-wrap" style={{ maxHeight: 260 }}><table><thead><tr><th>Time</th><th>From</th><th>Feed</th><th>Verdict</th><th>Sev.</th></tr></thead><tbody>
             {feed.slice(0, 25).map((e) => (
               <tr key={e.key} className={e.verdict === 'threat' ? 'threat click' : ''} onClick={() => e.alert_id && openAlert(e.alert_id)}>
-                <td className="nowrap">{e.timeStr}</td><td className="mono nowrap">{e.src_ip}</td><td className="muted" style={{ fontSize: '.78rem' }}>{e.origin === 'connector' ? (e.source || 'Live source') : e.origin === 'lab' ? 'Attack Lab' : e.origin === 'upload' ? 'Upload' : 'Simulated'}</td>
+                <td className="nowrap">{e.timeStr}</td><td className="mono nowrap">{e.src_ip}</td><td className="muted" style={{ fontSize: '.78rem' }}>{e.origin === 'connector' ? (e.source || 'Live source') : e.origin === 'lab' ? 'Simulated test (legacy)' : e.origin === 'upload' ? 'Upload' : 'Simulated'}</td>
                 <td>{e.verdict === 'threat' ? <strong style={{ color: 'var(--danger)' }}>{e.attack_type}</strong> : <span className="muted">normal</span>}</td><td><SevBadge severity={e.severity} /></td>
               </tr>))}
             {feed.length === 0 && <tr><td colSpan="5" className="empty">Waiting for events…</td></tr>}
