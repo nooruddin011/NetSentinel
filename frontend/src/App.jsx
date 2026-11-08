@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Activity, BellRing, Brain, ChevronDown, ChevronUp, Lock, LogOut, Moon, Plug, Settings, Sun, Upload as UploadIcon } from 'lucide-react'
 import { api, getToken, onUnauthorized, setToken } from './api'
 import { BRAND, roleLabel } from './brand'
@@ -28,6 +29,40 @@ const GROUPS = [
   { label: 'Manage', items: [{ id: 'admin', label: 'Admin', icon: Settings, role: 'admin' }] },
 ]
 const STATUS_TEXT = { live: 'Live', connecting: 'Connecting…', reconnecting: 'Reconnecting…', unauthorised: 'Not authorised' }
+
+function NavAccessHint({ label, Icon, message }) {
+  const anchor = useRef(null)
+  const [position, setPosition] = useState(null)
+  const updatePosition = useCallback(() => {
+    const rect = anchor.current?.getBoundingClientRect()
+    if (!rect) return
+    setPosition({
+      left: Math.min(rect.right + 10, Math.max(10, window.innerWidth - 222)),
+      top: Math.min(Math.max(rect.top + rect.height / 2, 36), window.innerHeight - 36),
+    })
+  }, [])
+  useEffect(() => {
+    if (!position) return undefined
+    window.addEventListener('scroll', updatePosition, true)
+    window.addEventListener('resize', updatePosition)
+    return () => {
+      window.removeEventListener('scroll', updatePosition, true)
+      window.removeEventListener('resize', updatePosition)
+    }
+  }, [position, updatePosition])
+
+  return (
+    <span ref={anchor} className="nav-hint-wrap" onMouseEnter={updatePosition} onMouseLeave={() => setPosition(null)}>
+      <button data-nav-id="upload" className="nav locked" aria-label={`${label}. ${message}`} disabled>
+        <Icon size={17} /> <span className="nav-label">{label}</span>
+      </button>
+      {position && createPortal(
+        <span className="nav-hint is-visible" role="tooltip" style={position}>{message}</span>,
+        document.body,
+      )}
+    </span>
+  )
+}
 
 function Console({ user, onLogout, onSession }) {
   const { theme, toggle } = useTheme()
@@ -120,20 +155,34 @@ function Console({ user, onLogout, onSession }) {
     <div className="shell">
       <nav id="argus-mobile-nav" className={`sidebar ${mobileNavOpen ? 'mobile-open' : ''}`} aria-label="Main">
         <div className="brand"><Logo size={36} /><span>{BRAND.name}<small>Threat intelligence</small></span></div>
-        {GROUPS.map((g) => (
+        {GROUPS.map((g) => {
+          // Keep privileged destinations out of the navigation for users who cannot access them.
+          // Analyst-only tools remain visible so viewers can discover the feature and how to request access.
+          const items = g.items.filter((item) => item.id !== 'admin' || canAct(user, 'admin'))
+          if (!items.length) return null
+          return (
           <div className="nav-section" key={g.label}>
             <div className="nav-group">{g.label}</div>
-            {g.items.map((n) => {
+            {items.map((n) => {
               const allowed = canAct(user, n.role)
+              const accessHint = n.id === 'upload'
+                ? 'Contact an Admin to request Analyst access.'
+                : `${n.label} requires the ${roleLabel(n.role)} role (you are signed in as ${roleLabel(user.role)})`
               return (
-                <button key={n.id} data-nav-id={n.id} className={`nav ${view === n.id ? 'active' : ''} ${allowed ? '' : 'locked'}`} aria-label={n.label} aria-current={view === n.id ? 'page' : undefined} disabled={!allowed}
-                  title={allowed ? n.label : `${n.label} requires the ${roleLabel(n.role)} role (you are signed in as ${roleLabel(user.role)})`} onClick={() => { setView(n.id); setMobileNavOpen(false) }}>
-                  <n.icon size={17} /> <span className="nav-label">{n.label}</span>
-                  {!allowed && <Lock size={12} className="lock" />}
-                  {n.id === 'models' && training && <span className="pulse" title="Model training in progress" />}
-                </button>)
+                n.id === 'upload' && !allowed ? (
+                  <NavAccessHint key={n.id} label={n.label} Icon={n.icon} message={accessHint} />
+                ) : (
+                  <button key={n.id} data-nav-id={n.id} className={`nav ${view === n.id ? 'active' : ''} ${allowed ? '' : 'locked'}`} aria-label={n.label} aria-current={view === n.id ? 'page' : undefined} disabled={!allowed}
+                    title={allowed ? n.label : accessHint} onClick={() => { setView(n.id); setMobileNavOpen(false) }}>
+                    <n.icon size={17} /> <span className="nav-label">{n.label}</span>
+                    {!allowed && <Lock size={12} className="lock" />}
+                    {n.id === 'models' && training && <span className="pulse" title="Model training in progress" />}
+                  </button>
+                ))
             })}
-          </div>))}
+          </div>
+          )
+        })}
         <button className="mobile-nav-more" onClick={() => setMobileNavOpen((open) => !open)} aria-label={mobileNavOpen ? 'Close navigation menu' : 'Open more navigation options'} aria-expanded={mobileNavOpen} aria-controls="argus-mobile-nav">
           {mobileNavOpen ? <><span>Close menu</span><ChevronDown size={16} /></> : <><span>More</span><ChevronUp size={16} /></>}
         </button>

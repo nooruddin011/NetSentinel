@@ -16,16 +16,40 @@ export default function Chatbot() {
   const [msgs, setMsgs] = useState(welcome)
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
-  const end = useRef(null)
+  const messages = useRef(null)
   const input = useRef(null)
+  const panel = useRef(null)
 
-  useEffect(() => { end.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }) }, [msgs, busy, open])
+  useEffect(() => {
+    const list = messages.current
+    if (list) list.scrollTo({ top: list.scrollHeight, behavior: 'smooth' })
+  }, [msgs, busy, open])
   useEffect(() => { if (open) input.current?.focus() }, [open])
   useEffect(() => {
     if (!open) return undefined
     const k = (e) => { if (e.key === 'Escape') setOpen(false) }
     window.addEventListener('keydown', k)
     return () => window.removeEventListener('keydown', k)
+  }, [open])
+  useEffect(() => {
+    if (!open) return undefined
+    const chatPanel = panel.current
+    if (!chatPanel) return undefined
+    const keepScrollInside = (event) => {
+      // The message list owns scrolling; wheel gestures over the rest of the panel
+      // must not scroll the dashboard behind it.
+      if (!event.target.closest?.('.chat-msgs')) event.preventDefault()
+    }
+    const closeOutside = (event) => {
+      if (event.target.closest?.('.chat-fab')) return
+      if (!chatPanel.contains(event.target)) setOpen(false)
+    }
+    chatPanel.addEventListener('wheel', keepScrollInside, { passive: false })
+    document.addEventListener('click', closeOutside)
+    return () => {
+      chatPanel.removeEventListener('wheel', keepScrollInside)
+      document.removeEventListener('click', closeOutside)
+    }
   }, [open])
 
   const send = async (m) => {
@@ -40,7 +64,7 @@ export default function Chatbot() {
 
   if (!open) return <button className="chat-fab" onClick={() => setOpen(true)} aria-label={`Open ${BRAND.name} assistant`}><MessageSquare size={22} /></button>
   return (
-    <div className="chat" role="dialog" aria-label={`${BRAND.name} assistant`}>
+    <div ref={panel} className="chat" role="dialog" aria-label={`${BRAND.name} assistant`} onClick={(event) => event.stopPropagation()}>
       <div className="chat-head">
         <div className="chat-id">
           <Logo size={34} />
@@ -51,14 +75,13 @@ export default function Chatbot() {
           <button className="icon-btn" onClick={() => setOpen(false)} aria-label="Close"><X size={15} /></button>
         </div>
       </div>
-      <div className="chat-msgs" aria-live="polite">
+      <div ref={messages} className="chat-msgs" aria-live="polite">
         {msgs.map((m, i) => (
           <div key={i} className={`msg-row ${m.role}`}>
             {m.role === 'bot' && <span className="msg-av"><Logo size={16} /></span>}
             <div className="msg-col"><div className={`msg ${m.role}`}><Rich text={m.text} /></div><span className="msg-time">{m.t}</span></div>
           </div>))}
         {busy && <div className="msg-row bot"><span className="msg-av"><Logo size={16} /></span><div className="typing" aria-label="Assistant is typing"><i /><i /><i /></div></div>}
-        <div ref={end} />
       </div>
       {msgs.length === 1 && <div className="chat-suggest">{SUGGESTIONS.map((s) => <button key={s} className="chip" onClick={() => send(s)}>{s}</button>)}</div>}
       <div className="chat-in">

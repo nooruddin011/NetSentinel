@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { Check, ChevronDown, X, ShieldCheck, Terminal } from 'lucide-react'
 import { api } from '../api'
-import { Bar, Card, Empty, ErrorNote, PageHead, SEV_COLOR, ScopeSwitch, SevBadge, Spinner, StatusBadge, canAct, fmtShort, fmtTime, isPseudonymised, pct } from './ui'
+import { Bar, Card, Empty, ErrorNote, PageHead, SEV_COLOR, ScopeSwitch, SevBadge, Spinner, StatusBadge, canAct, fmtShort, fmtTime, isPseudonymised, pct, resolveScope } from './ui'
 
 const ATTACKS = ['SQL Injection', 'XSS', 'Brute Force', 'Path Traversal', 'Command Injection', 'Web Reconnaissance', 'DDoS', 'Phishing', 'Malware', 'Ransomware', 'Botnet', 'Port Scanning', 'Insider Threat', 'MITM', 'Zero-Day']
 const KEY_FEATURES = ['dst_port', 'src_bytes', 'dst_bytes', 'duration', 'conn_count_src', 'distinct_dst_ports', 'failed_logins', 'syn_ratio', 'payload_entropy', 'sql_kw_count', 'script_tag_count', 'domain_age_days', 'beacon_interval_std', 'dns_query_rate', 'smb_write_rate', 'off_hours', 'unusual_dest', 'cert_mismatch']
@@ -181,12 +181,16 @@ export default function Alerts({ user, focusId, clearFocus, scope = 'all', scope
   const [open, setOpen] = useState(focusId || null)
   const [error, setError] = useState('')
   const size = 25
+  // The Alerts page omits the Demo filter. If Demo was selected elsewhere, fall back to Auto here.
+  const alertScopePref = scopePref === 'demo' ? 'auto' : scopePref
+  const alertScope = resolveScope(alertScopePref, mode)
 
   const load = useCallback(async () => {
-    try { setData(await api.alerts({ ...f, scope, limit: size, offset: page * size })); setError('') } catch (e) { setError(e.message) } finally { setLoading(false) }
-  }, [f, page, scope])
+    try { setData(await api.alerts({ ...f, scope: alertScope, limit: size, offset: page * size })); setError('') } catch (e) { setError(e.message) } finally { setLoading(false) }
+  }, [f, page, alertScope])
   useEffect(() => { load(); const id = setInterval(load, 8000); return () => clearInterval(id) }, [load])
   useEffect(() => { if (focusId) setOpen(focusId) }, [focusId])
+  useEffect(() => { if (scopePref === 'demo') setScopePref('auto') }, [scopePref, setScopePref])
   const set = (k) => (next) => { const value = typeof next === 'string' ? next : next.target.value; setF((current) => ({ ...current, [k]: value })); setPage(0) }
 
   return (
@@ -199,7 +203,7 @@ export default function Alerts({ user, focusId, clearFocus, scope = 'all', scope
           <FilterSelect label="Severity" value={f.severity} options={SEVERITY_FILTERS} onChange={set('severity')} />
           <FilterSelect label="Attack type" value={f.attack_type} options={ATTACK_FILTERS} onChange={set('attack_type')} />
           <FilterSelect label="Sort" value={f.sort} options={SORT_FILTERS} onChange={set('sort')} />
-          <ScopeSwitch value={scopePref} onChange={(v) => { setScopePref(v); setPage(0) }} mode={mode} />
+          <ScopeSwitch value={alertScopePref} onChange={(v) => { setScopePref(v); setPage(0) }} mode={mode} exclude={['demo']} />
           <span className="muted alert-count" aria-live="polite">{loading ? 'Loading alerts…' : `${data.total} alerts`}</span>
         </div>
         <ErrorNote error={error} />

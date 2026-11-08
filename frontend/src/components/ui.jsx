@@ -175,10 +175,10 @@ export const SCOPES = [
 ]
 export const resolveScope = (pref, mode) => (pref === 'auto' ? (mode === 'live' ? 'live' : 'all') : pref)
 
-export function ScopeSwitch({ value, onChange, mode }) {
+export function ScopeSwitch({ value, onChange, mode, exclude = [] }) {
   return (
     <div className="seg" role="group" aria-label="Data shown">
-      {SCOPES.map((s) => (
+      {SCOPES.filter((s) => !exclude.includes(s.id)).map((s) => (
         <button key={s.id} className={value === s.id ? 'on' : ''} onClick={() => onChange(s.id)} title={s.hint}>
           {s.label}{s.id === 'auto' ? ` (${resolveScope('auto', mode)})` : ''}
         </button>))}
