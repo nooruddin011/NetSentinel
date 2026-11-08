@@ -7,6 +7,7 @@ import Logo from './Logo'
 import FaqAccordion from './FaqAccordion'
 import ImageScatter from './ImageScatter'
 import LoginFeatureGrid from './LoginFeatureGrid'
+import WaveGridBackground from './WaveGridBackground'
 import { PasswordHelp, passwordRules } from './ui'
 
 function Field({ icon: Icon, label, children, trail }) {
@@ -63,6 +64,9 @@ export default function Login({ onLogin, notice }) {
   }, [])
 
   const registering = mode === 'register'
+  const waveColors = theme === 'dark'
+    ? { base: '#29312e', high: '#c69c52' }
+    : { base: '#e5decf', high: '#54788a' }
   const rulesOk = useMemo(() => passwordRules(password, username).every((r) => r.ok), [password, username])
   const usernameOk = /^[A-Za-z0-9_.@-]{3,64}$/.test(username.trim())
   const canSubmit = registering ? usernameOk && rulesOk && password === confirm && !busy : username.trim() && password && !busy
@@ -96,6 +100,16 @@ export default function Login({ onLogin, notice }) {
 
   return (
     <div className="auth landing">
+      <WaveGridBackground
+        className="landing-wave-grid"
+        gridSize={30}
+        colorBase={waveColors.base}
+        colorHigh={waveColors.high}
+        waveAmplitude={0.22}
+        waveMaxHeight={0.32}
+        waveJitter={0.06}
+        vignette={false}
+      />
       <header className="landing-nav" ref={headerRef}>
         <div className="landing-nav-inner">
           <a className="landing-brand" href="#landing-home" aria-label={`${BRAND.name} home`}>

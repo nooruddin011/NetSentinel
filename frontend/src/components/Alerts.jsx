@@ -1,10 +1,71 @@
-import React, { useCallback, useEffect, useState } from 'react'
-import { X, ShieldCheck, Terminal } from 'lucide-react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
+import { Check, ChevronDown, X, ShieldCheck, Terminal } from 'lucide-react'
 import { api } from '../api'
 import { Bar, Card, Empty, ErrorNote, PageHead, SEV_COLOR, ScopeSwitch, SevBadge, Spinner, StatusBadge, canAct, fmtShort, fmtTime, isPseudonymised, pct } from './ui'
 
 const ATTACKS = ['SQL Injection', 'XSS', 'Brute Force', 'Path Traversal', 'Command Injection', 'Web Reconnaissance', 'DDoS', 'Phishing', 'Malware', 'Ransomware', 'Botnet', 'Port Scanning', 'Insider Threat', 'MITM', 'Zero-Day']
 const KEY_FEATURES = ['dst_port', 'src_bytes', 'dst_bytes', 'duration', 'conn_count_src', 'distinct_dst_ports', 'failed_logins', 'syn_ratio', 'payload_entropy', 'sql_kw_count', 'script_tag_count', 'domain_age_days', 'beacon_interval_std', 'dns_query_rate', 'smb_write_rate', 'off_hours', 'unusual_dest', 'cert_mismatch']
+
+function FilterSelect({ label, value, options, onChange }) {
+  const [open, setOpen] = useState(false)
+  const root = useRef(null)
+  const selected = options.find((option) => option.value === value) || options[0]
+
+  useEffect(() => {
+    if (open) root.current?.querySelector('[aria-selected="true"]')?.focus()
+  }, [open])
+
+  useEffect(() => {
+    if (!open) return undefined
+    const dismiss = (event) => {
+      if (event.type === 'keydown' && event.key === 'Escape') {
+        setOpen(false)
+        root.current?.querySelector('.filter-trigger')?.focus()
+      } else if (event.type === 'pointerdown' && !root.current?.contains(event.target)) setOpen(false)
+    }
+    document.addEventListener('keydown', dismiss)
+    document.addEventListener('pointerdown', dismiss)
+    return () => {
+      document.removeEventListener('keydown', dismiss)
+      document.removeEventListener('pointerdown', dismiss)
+    }
+  }, [open])
+
+  const handleKeys = (event) => {
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      setOpen(false)
+      root.current?.querySelector('.filter-trigger')?.focus()
+      return
+    }
+    if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return
+    event.preventDefault()
+    const choices = [...root.current.querySelectorAll('[role="option"]')]
+    const current = choices.indexOf(document.activeElement)
+    const next = event.key === 'Home' ? 0 : event.key === 'End' ? choices.length - 1
+      : (current + (event.key === 'ArrowDown' ? 1 : -1) + choices.length) % choices.length
+    choices[next]?.focus()
+  }
+
+  return (
+    <div className={`filter-select ${open ? 'is-open' : ''}`} ref={root} onKeyDown={handleKeys}>
+      <button className="filter-trigger" type="button" aria-label={`${label}: ${selected.label}`} aria-haspopup="listbox" aria-expanded={open} onClick={() => setOpen((state) => !state)}>
+        <span className="filter-caption">{label}</span><span className="filter-value">{selected.label}</span><ChevronDown size={14} className="filter-chevron" aria-hidden="true" />
+      </button>
+      {open && <div className="filter-options" role="listbox" aria-label={label}>
+        {options.map((option) => (
+          <button key={option.value} type="button" role="option" aria-selected={option.value === value} className={`filter-option ${option.value === value ? 'selected' : ''}`} onClick={() => { onChange(option.value); setOpen(false); root.current?.querySelector('.filter-trigger')?.focus() }}>
+            <span>{option.label}</span>{option.value === value && <Check size={14} aria-hidden="true" />}
+          </button>))}
+      </div>}
+    </div>
+  )
+}
+
+const STATUS_FILTERS = [{ value: '', label: 'All statuses' }, ...['open', 'acknowledged', 'mitigated', 'resolved', 'false_positive'].map((s) => ({ value: s, label: s.replace('_', ' ') }))]
+const SEVERITY_FILTERS = [{ value: '', label: 'All severities' }, ...['Critical', 'High', 'Medium', 'Low'].map((s) => ({ value: s, label: s }))]
+const ATTACK_FILTERS = [{ value: '', label: 'All attack types' }, ...ATTACKS.map((s) => ({ value: s, label: s }))]
+const SORT_FILTERS = [{ value: 'time', label: 'Newest' }, { value: 'risk', label: 'Highest risk' }, { value: 'count', label: 'Most frequent' }]
 
 function AlertDrawer({ id, user, onClose, onChanged }) {
   const [a, setA] = useState(null)
@@ -116,38 +177,40 @@ export default function Alerts({ user, focusId, clearFocus, scope = 'all', scope
   const [f, setF] = useState({ status: '', severity: '', attack_type: '', q: '', sort: 'time' })
   const [page, setPage] = useState(0)
   const [data, setData] = useState({ alerts: [], total: 0 })
+  const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(focusId || null)
   const [error, setError] = useState('')
   const size = 25
 
   const load = useCallback(async () => {
-    try { setData(await api.alerts({ ...f, scope, limit: size, offset: page * size })); setError('') } catch (e) { setError(e.message) }
+    try { setData(await api.alerts({ ...f, scope, limit: size, offset: page * size })); setError('') } catch (e) { setError(e.message) } finally { setLoading(false) }
   }, [f, page, scope])
   useEffect(() => { load(); const id = setInterval(load, 8000); return () => clearInterval(id) }, [load])
   useEffect(() => { if (focusId) setOpen(focusId) }, [focusId])
-  const set = (k) => (e) => { setF({ ...f, [k]: e.target.value }); setPage(0) }
+  const set = (k) => (next) => { const value = typeof next === 'string' ? next : next.target.value; setF((current) => ({ ...current, [k]: value })); setPage(0) }
 
   return (
     <>
       <PageHead eyebrow="Monitor" title="Alerts" subtitle="Repeated detections from the same source are grouped into one alert. Open one to see why it was flagged and how to respond." />
       <Card>
-        <div className="row" style={{ marginBottom: '.8rem' }}>
+        <div className="row alert-filters-row" style={{ marginBottom: '.8rem' }}>
           <input placeholder="Search IP or attack…" value={f.q} onChange={set('q')} maxLength={64} aria-label="Search" />
-          <select value={f.status} onChange={set('status')} aria-label="Status"><option value="">All statuses</option>{['open', 'acknowledged', 'mitigated', 'resolved', 'false_positive'].map((s) => <option key={s} value={s}>{s.replace('_', ' ')}</option>)}</select>
-          <select value={f.severity} onChange={set('severity')} aria-label="Severity"><option value="">All severities</option>{['Critical', 'High', 'Medium', 'Low'].map((s) => <option key={s}>{s}</option>)}</select>
-          <select value={f.attack_type} onChange={set('attack_type')} aria-label="Attack type"><option value="">All attack types</option>{ATTACKS.map((s) => <option key={s}>{s}</option>)}</select>
-          <select value={f.sort} onChange={set('sort')} aria-label="Sort"><option value="time">Newest</option><option value="risk">Highest risk</option><option value="count">Most frequent</option></select>
+          <FilterSelect label="Status" value={f.status} options={STATUS_FILTERS} onChange={set('status')} />
+          <FilterSelect label="Severity" value={f.severity} options={SEVERITY_FILTERS} onChange={set('severity')} />
+          <FilterSelect label="Attack type" value={f.attack_type} options={ATTACK_FILTERS} onChange={set('attack_type')} />
+          <FilterSelect label="Sort" value={f.sort} options={SORT_FILTERS} onChange={set('sort')} />
           <ScopeSwitch value={scopePref} onChange={(v) => { setScopePref(v); setPage(0) }} mode={mode} />
-          <span className="muted" style={{ marginLeft: 'auto' }}>{data.total} alerts</span>
+          <span className="muted alert-count" aria-live="polite">{loading ? 'Loading alerts…' : `${data.total} alerts`}</span>
         </div>
         <ErrorNote error={error} />
+        {loading && <div className="alert-loading" role="status" aria-label="Loading alerts">{Array.from({ length: 5 }, (_, row) => <div className="alert-skeleton-row" key={row}>{Array.from({ length: 9 }, (_, col) => <span className={`alert-skeleton-cell w${(row + col) % 3}`} key={col} />)}</div>)}</div>}
         <div className="table-wrap" style={{ maxHeight: 'none' }}><table><thead><tr><th>#</th><th>Last seen</th><th>Attack</th><th>Severity</th><th>Risk</th><th>From → target</th><th>Reported by</th><th>Hits</th><th>Status</th></tr></thead><tbody>
           {data.alerts.map((a) => (
             <tr key={a.id} className="click" onClick={() => setOpen(a.id)}>
               <td>{a.id}</td><td className="nowrap">{fmtShort(a.last_seen)}</td><td className="nowrap"><strong>{a.attack_type}</strong></td><td><SevBadge severity={a.severity} /></td><td>{a.risk_score}</td>
               <td className="mono nowrap">{a.src_ip}{a.dst_ip && a.dst_ip !== '0.0.0.0' ? ` → ${a.dst_ip}` : ''}</td><td className="muted nowrap" style={{ fontSize: '.8rem' }}>{a.source_name || (a.origin === 'upload' ? 'Upload' : a.origin === 'lab' ? 'Simulated test (legacy)' : a.origin === 'connector' ? '(deleted source)' : 'Simulated')}</td><td>{a.count}</td><td><StatusBadge status={a.status} /></td>
             </tr>))}
-          {data.alerts.length === 0 && <tr><td colSpan="9" className="empty">No alerts match.</td></tr>}
+          {!loading && data.alerts.length === 0 && <tr><td colSpan="9" className="empty">No alerts match.</td></tr>}
         </tbody></table></div>
         <div className="row" style={{ justifyContent: 'center', marginTop: '.8rem' }}>
           <button className="btn ghost sm" disabled={page === 0} onClick={() => setPage(page - 1)}>Previous</button>
