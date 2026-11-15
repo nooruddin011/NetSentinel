@@ -27,12 +27,18 @@ Authenticated requests are scoped to the caller's workspace. Self-registration c
 | POST | `/api/auth/google/link` | Workspace Owner | Link a verified Google identity to the owner account; identities already linked elsewhere are rejected |
 | POST | `/api/auth/login` | Public | Credentials → JWT. 401 wrong credentials; **403 account disabled** (only revealed with the correct password); 429 throttled |
 | GET | `/api/auth/me` | Any signed-in user | Current user incl. last sign-in |
-| DELETE | `/api/auth/account` | Workspace Owner | Delete the owner account and transfer ownership to an active Admin; workspace data is retained |
+| PATCH | `/api/auth/profile` | Any signed-in user | Update display name or a resized JPEG profile photo |
+| DELETE | `/api/auth/account` | Workspace Owner | Verify by password or linked Google identity, delete the owner account and transfer ownership to a selected active Admin; workspace data is retained |
 | POST | `/api/auth/register` | Public | Legacy password self-registration endpoint; returns 403 because public workspace creation uses Google sign-in and local accounts are provisioned by a workspace Admin |
 | GET | `/api/auth/users` | Admin | List users |
 | POST | `/api/auth/users` | Admin | Create user with any role |
 | DELETE | `/api/auth/users/{user_id}` | Admin | Delete a workspace member; the Owner must use the self-delete endpoint |
 | PATCH | `/api/auth/users/{user_id}` | Admin | Change member role / enable / disable / reset password / name; Owner role, status, and password are protected from other Admins |
+| POST | `/api/auth/role-requests` | Viewer | Request the next role with a short explanation |
+| GET | `/api/auth/role-requests` | Viewer | Owner sees pending workspace requests; members see their own request history |
+| POST | `/api/auth/role-requests/{request_id}/decision` | Workspace Owner | Approve or decline a request; approval updates the role atomically |
+| GET | `/api/auth/notifications` | Viewer | List notifications addressed to the current workspace member |
+| POST | `/api/auth/notifications/read` | Viewer | Mark the current member's notifications as read |
 | DELETE | `/api/blocklist/{ip}` | Admin | Remove an IP from the simulated blocklist |
 | POST | `/api/chat` | Viewer | Assistant (answers are computed from stored data) |
 | GET | `/api/collector/download` | Admin | Download `argus_collector.py` |

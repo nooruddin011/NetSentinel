@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Check, ChevronDown, X, ShieldCheck, Terminal } from 'lucide-react'
 import { api } from '../api'
 import { Bar, Card, Empty, ErrorNote, PageHead, SEV_COLOR, ScopeSwitch, SevBadge, Spinner, StatusBadge, canAct, fmtShort, fmtTime, isPseudonymised, pct, resolveScope } from './ui'
@@ -8,12 +9,27 @@ const KEY_FEATURES = ['dst_port', 'src_bytes', 'dst_bytes', 'duration', 'conn_co
 
 export function FilterSelect({ label, value, options, onChange, disabled = false, title, showCaption = true }) {
   const [open, setOpen] = useState(false)
+  const [menuPosition, setMenuPosition] = useState(null)
   const root = useRef(null)
+  const menu = useRef(null)
   const selected = options.find((option) => option.value === value) || options[0]
 
   useEffect(() => {
-    if (open) root.current?.querySelector('[aria-selected="true"]')?.focus()
-  }, [open])
+    if (open && menuPosition) menu.current?.querySelector('[aria-selected="true"]')?.focus()
+  }, [open, menuPosition])
+
+  const positionMenu = useCallback(() => {
+    const rect = root.current?.getBoundingClientRect()
+    if (!rect) return
+    const width = Math.min(Math.max(rect.width, 120), window.innerWidth - 16)
+    const left = Math.min(Math.max(8, rect.left), window.innerWidth - width - 8)
+    const below = window.innerHeight - rect.bottom - 12
+    const above = rect.top - 12
+    const estimated = Math.min(options.length * 39 + 12, Math.min(340, window.innerHeight * .55))
+    const placeAbove = below < Math.min(estimated, 150) && above > below
+    setMenuPosition({ left, top: placeAbove ? Math.max(8, rect.top - Math.min(estimated, above) - 7) : rect.bottom + 7,
+      minWidth: rect.width, maxHeight: Math.max(100, Math.min(340, window.innerHeight * .55, placeAbove ? above : below)) })
+  }, [options.length])
 
   useEffect(() => {
     if (!open) return undefined
@@ -21,15 +37,20 @@ export function FilterSelect({ label, value, options, onChange, disabled = false
       if (event.type === 'keydown' && event.key === 'Escape') {
         setOpen(false)
         root.current?.querySelector('.filter-trigger')?.focus()
-      } else if (event.type === 'pointerdown' && !root.current?.contains(event.target)) setOpen(false)
+      } else if (event.type === 'pointerdown' && !root.current?.contains(event.target) && !menu.current?.contains(event.target)) setOpen(false)
     }
+    positionMenu()
     document.addEventListener('keydown', dismiss)
     document.addEventListener('pointerdown', dismiss)
+    window.addEventListener('resize', positionMenu)
+    window.addEventListener('scroll', positionMenu, true)
     return () => {
       document.removeEventListener('keydown', dismiss)
       document.removeEventListener('pointerdown', dismiss)
+      window.removeEventListener('resize', positionMenu)
+      window.removeEventListener('scroll', positionMenu, true)
     }
-  }, [open])
+  }, [open, positionMenu])
 
   const handleKeys = (event) => {
     if (event.key === 'Escape') {
@@ -40,7 +61,7 @@ export function FilterSelect({ label, value, options, onChange, disabled = false
     }
     if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return
     event.preventDefault()
-    const choices = [...root.current.querySelectorAll('[role="option"]')]
+    const choices = [...menu.current.querySelectorAll('[role="option"]')]
     const current = choices.indexOf(document.activeElement)
     const next = event.key === 'Home' ? 0 : event.key === 'End' ? choices.length - 1
       : (current + (event.key === 'ArrowDown' ? 1 : -1) + choices.length) % choices.length
@@ -52,12 +73,12 @@ export function FilterSelect({ label, value, options, onChange, disabled = false
       <button className="filter-trigger" type="button" disabled={disabled} title={title} aria-label={`${label}: ${selected.label}`} aria-haspopup="listbox" aria-expanded={open} onClick={() => setOpen((state) => !state)}>
         {showCaption && <span className="filter-caption">{label}</span>}<span className="filter-value">{selected.label}</span><ChevronDown size={14} className="filter-chevron" aria-hidden="true" />
       </button>
-      {open && <div className="filter-options" role="listbox" aria-label={label}>
+      {open && menuPosition && createPortal(<div ref={menu} className="filter-options filter-options-portal" style={menuPosition} role="listbox" aria-label={label} onKeyDown={handleKeys}>
         {options.map((option) => (
           <button key={option.value} type="button" role="option" aria-selected={option.value === value} className={`filter-option ${option.value === value ? 'selected' : ''}`} onClick={() => { onChange(option.value); setOpen(false); root.current?.querySelector('.filter-trigger')?.focus() }}>
             <span>{option.label}</span>{option.value === value && <Check size={14} aria-hidden="true" />}
           </button>))}
-      </div>}
+      </div>, document.body)}
     </div>
   )
 }

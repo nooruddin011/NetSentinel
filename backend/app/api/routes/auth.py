@@ -13,7 +13,9 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 
 from app.api.deps import client_ip, current_user, get_ctx, require
 from app.branding import APP_NAME
-from app.schemas.api import GoogleCredential, LoginRequest, PasswordChange, RegisterRequest, UserCreate, UserUpdate
+from app.schemas.api import (GoogleCredential, LoginRequest, PasswordChange, RegisterRequest,
+                             DeleteAccountRequest, ProfileUpdate, RoleRequestCreate, RoleRequestDecision,
+                             UserCreate, UserUpdate)
 from app.security.jwt import encode_token
 from app.security.passwords import hash_password, password_problems, password_version, verify_password
 
@@ -36,7 +38,7 @@ _GOOGLE_VERIFY_REQUEST = _BoundedGoogleRequest(session=CacheControl(requests.Ses
 def _public(u: dict) -> dict:
     return dict(id=u["id"], username=u["username"], full_name=u.get("full_name"), role=u["role"],
                 workspace_id=u.get("workspace_id"), workspace_name=u.get("workspace_name"),
-                is_workspace_owner=bool(u.get("is_workspace_owner")))
+                is_workspace_owner=bool(u.get("is_workspace_owner")), avatar_data=u.get("avatar_data"))
 
 
 def _issue(ctx, user: dict) -> dict:
@@ -196,19 +198,41 @@ def me(user=Depends(current_user)):
     return dict(_public(user), last_login=user.get("last_login"), created_at=user.get("created_at"))
 
 
+@router.patch("/profile")
+def update_profile(body: ProfileUpdate, request: Request, user=Depends(current_user), ctx=Depends(get_ctx)):
+    fields = body.model_fields_set
+    if not fields:
+        raise HTTPException(422, "Provide a display name or profile photo to update")
+    ctx.repo.update_profile(user["id"], full_name=body.full_name, avatar_data=body.avatar_data,
+                            update_name="full_name" in fields, update_avatar="avatar_data" in fields)
+    ctx.repo.audit(user["username"], "profile.update", user["username"],
+                   f"name={'updated' if 'full_name' in fields else 'unchanged'} photo={'updated' if 'avatar_data' in fields else 'unchanged'}",
+                   client_ip(request))
+    return _public(ctx.repo.get_user(user["id"]))
+
+
 @router.delete("/account")
-def delete_workspace_owner_account(request: Request, user=Depends(current_user), ctx=Depends(get_ctx)):
+def delete_workspace_owner_account(body: DeleteAccountRequest, request: Request, user=Depends(current_user), ctx=Depends(get_ctx)):
     if not user.get("is_workspace_owner"):
         raise HTTPException(403, "Only the workspace owner can delete this account")
-    admins = [u for u in ctx.repo.list_users()
-              if u["id"] != user["id"] and u["role"] == "admin" and u["is_active"]]
-    if not admins:
+    successor = next((u for u in ctx.repo.list_users()
+                      if u["id"] == body.successor_admin_id and u["id"] != user["id"]
+                      and u["role"] == "admin" and u["is_active"]), None)
+    if not successor:
         raise HTTPException(409, "Promote another active Admin before deleting your account so the workspace stays manageable")
-    successor = admins[0]
-    ctx.repo.audit(user["username"], "workspace.owner_account_delete", successor["username"],
-                   "ownership transferred; workspace data retained", client_ip(request), user["workspace_id"])
+    if body.current_password:
+        if not verify_password(body.current_password, user["password_hash"]):
+            raise HTTPException(400, "Password verification failed")
+    elif body.google_credential:
+        claims = _verified_google_claims(body.google_credential, ctx)
+        if not ctx.repo.google_subject_matches(user["id"], claims["subject"]):
+            raise HTTPException(403, "The Google account does not match the one linked to this workspace owner")
+    else:
+        raise HTTPException(422, "Confirm your password or re-authenticate with the linked Google account")
     if not ctx.repo.delete_workspace_owner_account(user["id"], successor["id"]):
         raise HTTPException(409, "Workspace ownership changed. Refresh and try again.")
+    ctx.repo.audit(user["username"], "workspace.owner_account_delete", successor["username"],
+                   "ownership transferred; workspace data retained", client_ip(request), user["workspace_id"])
     return dict(status="deleted", new_owner=successor["username"])
 
 
@@ -228,6 +252,51 @@ def change_password(body: PasswordChange, request: Request, user=Depends(current
 @router.get("/users")
 def list_users(user=Depends(require("admin")), ctx=Depends(get_ctx)):
     return dict(users=ctx.repo.list_users())
+
+
+@router.post("/role-requests", status_code=201)
+def create_role_request(body: RoleRequestCreate, request: Request, user=Depends(require("viewer")), ctx=Depends(get_ctx)):
+    request_id = ctx.repo.create_role_request(user["id"], body.requested_role, body.message)
+    errors = {"workspace_required": (400, "Workspace is not available"), "not_found": (404, "Account or workspace not found"),
+              "invalid_role": (409, "You can only request the next role above your current role"),
+              "pending_exists": (409, "You already have a pending access request")}
+    if isinstance(request_id, str) and request_id in errors:
+        status, detail = errors[request_id]
+        raise HTTPException(status, detail)
+    ctx.repo.audit(user["username"], "role.request", body.requested_role, body.message, client_ip(request))
+    return dict(id=request_id, status="pending")
+
+
+@router.get("/role-requests")
+def list_role_requests(user=Depends(require("viewer")), ctx=Depends(get_ctx)):
+    return dict(requests=ctx.repo.list_role_requests(user["id"], bool(user.get("is_workspace_owner"))))
+
+
+@router.post("/role-requests/{request_id}/decision")
+def decide_role_request(request_id: int, body: RoleRequestDecision, request: Request,
+                        user=Depends(require("admin")), ctx=Depends(get_ctx)):
+    if not user.get("is_workspace_owner"):
+        raise HTTPException(403, "Only the workspace owner can review role requests")
+    result = ctx.repo.decide_role_request(request_id, user["id"], body.decision)
+    errors = {"forbidden": (403, "Only the workspace owner can review role requests"),
+              "not_found": (404, "Request not found"), "already_decided": (409, "This request has already been reviewed"),
+              "role_changed": (409, "The member's account changed; review the request again")}
+    if result in errors:
+        status, detail = errors[result]
+        raise HTTPException(status, detail)
+    ctx.repo.audit(user["username"], f"role.request.{body.decision}", str(request_id), None, client_ip(request))
+    return dict(status="ok")
+
+
+@router.get("/notifications")
+def list_notifications(user=Depends(require("viewer")), ctx=Depends(get_ctx)):
+    return ctx.repo.list_notifications(user["id"])
+
+
+@router.post("/notifications/read")
+def mark_notifications_read(user=Depends(require("viewer")), ctx=Depends(get_ctx)):
+    ctx.repo.mark_notifications_read(user["id"])
+    return dict(status="ok")
 
 
 @router.post("/users", status_code=201)
@@ -261,6 +330,8 @@ def update_user(user_id: int, body: UserUpdate, request: Request, user=Depends(r
         _policy_or_422(body.password, target["username"])
         pw = hash_password(body.password)
     ctx.repo.update_user(user_id, role=body.role, is_active=body.is_active, password_hash=pw, full_name=body.full_name)
+    if body.role is not None and body.role != target["role"]:
+        ctx.repo.notify_role_change(target["id"], user["full_name"] or user["username"], body.role)
     ctx.repo.audit(user["username"], "user.update", target["username"],
                    f"role={body.role} active={body.is_active} pw={'reset' if pw else 'unchanged'}", client_ip(request))
     return dict(status="ok")

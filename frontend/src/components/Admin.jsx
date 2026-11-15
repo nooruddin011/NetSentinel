@@ -67,7 +67,7 @@ function Users({ me }) {
               <tr key={u.id}>
                 <td><div className="row" style={{ flexWrap: 'nowrap' }}><Avatar user={u} /><div><b>{u.full_name || u.username}</b>{self && <span className="muted"> (you)</span>}<div className="muted mono">{u.username}</div></div></div></td>
                 <td>{owner
-                  ? <span className="filter-value">Owner</span>
+                  ? <span className="filter-trigger role-owner-display"><span className="filter-value">Owner</span></span>
                   : <FilterSelect label="Role" showCaption={false} value={u.role} options={roleOptions} disabled={self} title={self ? 'You cannot change your own role' : undefined} onChange={(role) => run(() => api.updateUser(u.id, { role }), `${u.username} is now ${roleLabel(role)}`)} />}</td>
                 <td>{u.is_active ? <span className="badge st-mitigated">Active</span> : <span className="badge st-open">Disabled</span>}</td>
                 <td className="muted">{u.last_login ? fmtTime(u.last_login) : 'Never'}</td>

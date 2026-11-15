@@ -98,6 +98,12 @@ class Repository:
             return _row(c.execute("SELECT email,email_verified,created_at FROM auth_identities "
                                   "WHERE user_id=? AND provider='google'", (user_id,)).fetchone())
 
+    def google_subject_matches(self, user_id, subject):
+        with self.db.connect() as c:
+            row = c.execute("SELECT 1 FROM auth_identities WHERE user_id=? AND provider='google' AND subject=?",
+                            (user_id, subject)).fetchone()
+            return bool(row)
+
     def register_google_user(self, subject, email, name, password_hash):
         """Create a Google-only Admin and its private workspace atomically; return (user_id, created)."""
         with self.db.connect() as c:
@@ -199,6 +205,18 @@ class Repository:
         with self.db.connect() as c:
             c.execute(f"UPDATE users SET {', '.join(sets)} WHERE id=?{clause}", (*vals, user_id, *wsvals))  # fixed column names
 
+    def update_profile(self, user_id, *, full_name=None, avatar_data=None, update_name=False, update_avatar=False):
+        sets, vals = [], []
+        if update_name:
+            sets.append("full_name=?"); vals.append((full_name or "").strip() or None)
+        if update_avatar:
+            sets.append("avatar_data=?"); vals.append(avatar_data)
+        if not sets:
+            return
+        clause, wsvals = self._ws()
+        with self.db.connect() as c:
+            c.execute(f"UPDATE users SET {', '.join(sets)} WHERE id=?{clause}", (*vals, user_id, *wsvals))
+
     def delete_user(self, user_id) -> bool:
         clause, wsvals = self._ws()
         with self.db.connect() as c:
@@ -218,6 +236,104 @@ class Repository:
             c.execute("UPDATE workspaces SET owner_user_id=? WHERE id=?", (successor_user_id, self.workspace_id))
             deleted = c.execute("DELETE FROM users WHERE id=? AND workspace_id=?", (owner_user_id, self.workspace_id))
             return deleted.rowcount == 1
+
+    # ------------------------------------------------------------------ workspace role requests and inbox
+    @staticmethod
+    def _add_notification(c, workspace_id, recipient_user_id, kind, title, message):
+        c.execute("INSERT INTO workspace_notifications(workspace_id,recipient_user_id,kind,title,message,created_at) VALUES(?,?,?,?,?,?)",
+                  (workspace_id, recipient_user_id, kind, title[:100], message[:500], time.time()))
+
+    def create_role_request(self, requester_user_id, requested_role, message):
+        if self.workspace_id is None:
+            return "workspace_required"
+        with self.db.connect() as c:
+            c.execute("BEGIN IMMEDIATE")
+            requester = c.execute("SELECT id,username,full_name,role,is_active FROM users WHERE id=? AND workspace_id=?",
+                                  (requester_user_id, self.workspace_id)).fetchone()
+            owner = c.execute("SELECT owner_user_id FROM workspaces WHERE id=?", (self.workspace_id,)).fetchone()
+            if not requester or not requester["is_active"] or not owner or owner[0] is None:
+                return "not_found"
+            allowed = {"viewer": "analyst", "analyst": "admin"}
+            if allowed.get(requester["role"]) != requested_role:
+                return "invalid_role"
+            if c.execute("SELECT 1 FROM role_requests WHERE workspace_id=? AND requester_user_id=? AND status='pending'",
+                         (self.workspace_id, requester_user_id)).fetchone():
+                return "pending_exists"
+            cur = c.execute("INSERT INTO role_requests(workspace_id,requester_user_id,requested_role,message,created_at) VALUES(?,?,?,?,?)",
+                            (self.workspace_id, requester_user_id, requested_role, message[:600], time.time()))
+            name = requester["full_name"] or requester["username"]
+            self._add_notification(c, self.workspace_id, owner[0], "role_request", "Access request received",
+                                   f"{name} requested the {requested_role.title()} role.")
+            return cur.lastrowid
+
+    def list_role_requests(self, user_id, is_owner=False, limit=40):
+        if self.workspace_id is None:
+            return []
+        with self.db.connect() as c:
+            if is_owner:
+                sql = ("SELECT rr.*,u.username,u.full_name FROM role_requests rr JOIN users u ON u.id=rr.requester_user_id "
+                       "WHERE rr.workspace_id=? AND rr.status='pending' ORDER BY rr.created_at DESC LIMIT ?")
+                vals = (self.workspace_id, limit)
+            else:
+                sql = ("SELECT rr.*,u.username,u.full_name,reviewer.full_name AS reviewer_full_name, "
+                       "reviewer.username AS reviewer_username FROM role_requests rr "
+                       "JOIN users u ON u.id=rr.requester_user_id "
+                       "LEFT JOIN users reviewer ON reviewer.id=rr.reviewer_user_id AND reviewer.workspace_id=rr.workspace_id "
+                       "WHERE rr.workspace_id=? AND rr.requester_user_id=? ORDER BY rr.created_at DESC LIMIT ?")
+                vals = (self.workspace_id, user_id, limit)
+            return [dict(row) for row in c.execute(sql, vals)]
+
+    def decide_role_request(self, request_id, owner_user_id, decision):
+        if self.workspace_id is None:
+            return "not_found"
+        with self.db.connect() as c:
+            c.execute("BEGIN IMMEDIATE")
+            owner = c.execute("SELECT owner_user_id FROM workspaces WHERE id=?", (self.workspace_id,)).fetchone()
+            if not owner or owner[0] != owner_user_id:
+                return "forbidden"
+            req = c.execute("SELECT rr.*,u.username,u.full_name,u.is_active,u.role FROM role_requests rr "
+                            "JOIN users u ON u.id=rr.requester_user_id WHERE rr.id=? AND rr.workspace_id=?",
+                            (request_id, self.workspace_id)).fetchone()
+            if not req:
+                return "not_found"
+            if req["status"] != "pending":
+                return "already_decided"
+            if decision == "approved":
+                expected = {"viewer": "analyst", "analyst": "admin"}.get(req["role"])
+                if not req["is_active"] or expected != req["requested_role"]:
+                    return "role_changed"
+                c.execute("UPDATE users SET role=? WHERE id=? AND workspace_id=?",
+                          (req["requested_role"], req["requester_user_id"], self.workspace_id))
+            c.execute("UPDATE role_requests SET status=?,reviewed_at=?,reviewer_user_id=? WHERE id=? AND status='pending'",
+                      (decision, time.time(), owner_user_id, request_id))
+            role_word = req["requested_role"].title()
+            title = "Role request approved" if decision == "approved" else "Role request declined"
+            text = (f"Your workspace role is now {role_word}." if decision == "approved"
+                    else f"Your request for the {role_word} role was declined.")
+            self._add_notification(c, self.workspace_id, req["requester_user_id"], f"role_{decision}", title, text)
+            return "ok"
+
+    def list_notifications(self, user_id, limit=40):
+        with self.db.connect() as c:
+            rows = [dict(row) for row in c.execute(
+                "SELECT id,kind,title,message,created_at,read_at FROM workspace_notifications "
+                "WHERE workspace_id=? AND recipient_user_id=? ORDER BY id DESC LIMIT ?",
+                (self.workspace_id, user_id, limit))]
+            unread = c.execute("SELECT COUNT(*) FROM workspace_notifications WHERE workspace_id=? AND recipient_user_id=? AND read_at IS NULL",
+                               (self.workspace_id, user_id)).fetchone()[0]
+            return {"notifications": rows, "unread": unread}
+
+    def mark_notifications_read(self, user_id):
+        with self.db.connect() as c:
+            c.execute("UPDATE workspace_notifications SET read_at=? WHERE workspace_id=? AND recipient_user_id=? AND read_at IS NULL",
+                      (time.time(), self.workspace_id, user_id))
+
+    def notify_role_change(self, recipient_user_id, actor_name, role):
+        if self.workspace_id is None:
+            return
+        with self.db.connect() as c:
+            self._add_notification(c, self.workspace_id, recipient_user_id, "role_changed", "Workspace role updated",
+                                   f"{actor_name} changed your workspace role to {role.title()}.")
 
     def touch_login(self, user_id):
         with self.db.connect() as c:

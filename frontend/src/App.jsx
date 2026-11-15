@@ -15,6 +15,7 @@ import Sources from './components/Sources'
 import Upload from './components/Upload'
 import Admin from './components/Admin'
 import Account from './components/Account'
+import Inbox from './components/Inbox'
 import Chatbot from './components/Chatbot'
 import ErrorBoundary from './components/ErrorBoundary'
 import { Avatar, RoleBadge, Spinner, canAct, resolveScope } from './components/ui'
@@ -65,7 +66,7 @@ function NavAccessHint({ label, Icon, message }) {
   )
 }
 
-function Console({ user, onLogout, onSession }) {
+function Console({ user, onLogout, onSession, onUserUpdate }) {
   const { theme, toggle } = useTheme()
   const confirm = useConfirm()
   const [view, setView] = useState('overview')
@@ -199,7 +200,6 @@ function Console({ user, onLogout, onSession }) {
               <span className="who"><b>{user.full_name || user.username}</b><small className="workspace-label">{user.workspace_name}</small><RoleBadge role={user.is_workspace_owner ? 'owner' : user.role} /></span>
             </button>
             <div className="foot-actions">
-              <button className="icon-btn" onClick={toggle} aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`} title="Toggle theme">{theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}</button>
               <button className="btn ghost sm" onClick={confirmLogout}><LogOut size={14} /> Sign out</button>
             </div>
           </div>
@@ -213,11 +213,15 @@ function Console({ user, onLogout, onSession }) {
             <span className="console-context-separator">/</span>
             <span>{activeSection}</span>
           </div>
-          <div className={`console-feed ${live.status === 'live' ? 'is-connected' : ''}`}>
-            <span className={`dot ${dot}`} />
-            <span>{feedLabel}</span>
-            <span className="console-feed-separator" />
-            <span className="console-mode">{mode === 'live' ? 'Live data' : 'Demo data'}</span>
+          <div className="console-topbar-actions">
+            <Inbox user={user} onUserUpdate={onUserUpdate} />
+            <button className="icon-btn console-theme-button" onClick={toggle} aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`} title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}>{theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}</button>
+            <div className={`console-feed ${live.status === 'live' ? 'is-connected' : ''}`}>
+              <span className={`dot ${dot}`} />
+              <span>{feedLabel}</span>
+              <span className="console-feed-separator" />
+              <span className="console-mode">{mode === 'live' ? 'Live data' : 'Demo data'}</span>
+            </div>
           </div>
         </header>
         <ErrorBoundary resetKey={view}>
@@ -228,7 +232,7 @@ function Console({ user, onLogout, onSession }) {
           {view === 'models' && <Models user={user} train={train} setTrain={setTrain} />}
           {view === 'upload' && <Upload user={user} />}
           {view === 'admin' && canAct(user, 'admin') && <Admin user={user} />}
-          {view === 'account' && <Account user={user} onSession={onSession} onLogout={confirmLogout} onAccountDeleted={onLogout} />}
+          {view === 'account' && <Account user={user} onSession={onSession} onLogout={confirmLogout} onAccountDeleted={onLogout} onProfileUpdate={onUserUpdate} />}
           </div>
         </ErrorBoundary>
       </main>
@@ -253,8 +257,9 @@ export default function App() {
   }, [])
 
   const startSession = useCallback((res) => { setToken(res.access_token); setUser(res.user); setNotice('') }, [])
+  const updateUser = useCallback((next) => setUser((current) => current && current.id === next.id && current.role === next.role && current.is_workspace_owner === next.is_workspace_owner && current.full_name === next.full_name && current.avatar_data === next.avatar_data ? current : next), [])
 
   if (checking) return <Spinner label="Restoring session…" />
   if (!user) return <Login onLogin={startSession} notice={notice} />
-  return <Console user={user} onLogout={logout} onSession={startSession} />
+  return <Console user={user} onLogout={logout} onSession={startSession} onUserUpdate={updateUser} />
 }

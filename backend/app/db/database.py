@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS users (
     is_active INTEGER NOT NULL DEFAULT 1,
     created_at REAL NOT NULL,
     full_name TEXT,
+    avatar_data TEXT,
     last_login REAL,
     workspace_id INTEGER
 );
@@ -39,6 +40,29 @@ CREATE TABLE IF NOT EXISTS auth_identities (
     UNIQUE(user_id, provider)
 );
 CREATE INDEX IF NOT EXISTS idx_auth_identities_user ON auth_identities(user_id);
+CREATE TABLE IF NOT EXISTS role_requests (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    workspace_id INTEGER NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    requester_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    requested_role TEXT NOT NULL CHECK (requested_role IN ('analyst','admin')),
+    message TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','approved','declined')),
+    created_at REAL NOT NULL,
+    reviewed_at REAL,
+    reviewer_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL
+);
+CREATE INDEX IF NOT EXISTS idx_role_requests_workspace_status ON role_requests(workspace_id,status,created_at);
+CREATE TABLE IF NOT EXISTS workspace_notifications (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    workspace_id INTEGER NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    recipient_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    kind TEXT NOT NULL,
+    title TEXT NOT NULL,
+    message TEXT NOT NULL,
+    created_at REAL NOT NULL,
+    read_at REAL
+);
+CREATE INDEX IF NOT EXISTS idx_workspace_notifications_recipient ON workspace_notifications(recipient_user_id,created_at);
 CREATE TABLE IF NOT EXISTS events (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     workspace_id INTEGER,
@@ -183,7 +207,7 @@ class Database:
         if "owner_user_id" not in workspace_cols:
             conn.execute("ALTER TABLE workspaces ADD COLUMN owner_user_id INTEGER")
         have = {r[1] for r in conn.execute("PRAGMA table_info(users)")}
-        for col, ddl in (("full_name", "TEXT"), ("last_login", "REAL"), ("workspace_id", "INTEGER")):
+        for col, ddl in (("full_name", "TEXT"), ("avatar_data", "TEXT"), ("last_login", "REAL"), ("workspace_id", "INTEGER")):
             if col not in have:
                 conn.execute(f"ALTER TABLE users ADD COLUMN {col} {ddl}")
         conn.execute("INSERT OR IGNORE INTO workspaces(id,name,created_by,created_at) VALUES(1,'Admin workspace','system',strftime('%s','now'))")

@@ -66,6 +66,65 @@ class UserUpdate(BaseModel):
         return _clean_name(v)
 
 
+class RoleRequestCreate(BaseModel):
+    requested_role: Literal["analyst", "admin"]
+    message: str = Field(min_length=12, max_length=600)
+
+    @field_validator("message")
+    @classmethod
+    def _message(cls, v):
+        v = " ".join(v.split())
+        if len(v) < 12:
+            raise ValueError("Please add a little more detail (at least 12 characters)")
+        if any(ord(ch) < 32 for ch in v):
+            raise ValueError("Message contains unsupported control characters")
+        return v
+
+
+class RoleRequestDecision(BaseModel):
+    decision: Literal["approved", "declined"]
+
+
+class ProfileUpdate(BaseModel):
+    full_name: Optional[str] = Field(default=None, max_length=200)
+    avatar_data: Optional[str] = Field(default=None, max_length=400000)
+
+    @field_validator("full_name")
+    @classmethod
+    def _name(cls, v):
+        return _clean_name(v)
+
+    @field_validator("avatar_data")
+    @classmethod
+    def _avatar(cls, v):
+        if v is None:
+            return None
+        if not v.startswith("data:image/jpeg;base64,"):
+            raise ValueError("Profile photo must be a JPEG image")
+        import base64
+        import binascii
+        try:
+            raw = base64.b64decode(v.split(",", 1)[1], validate=True)
+        except (binascii.Error, ValueError):
+            raise ValueError("Profile photo data is invalid")
+        if not 4 < len(raw) <= 280000 or not raw.startswith(b"\xff\xd8\xff") or not raw.endswith(b"\xff\xd9"):
+            raise ValueError("Profile photo must be a valid JPEG under 280 KB")
+        return v
+
+
+class DeleteAccountRequest(BaseModel):
+    successor_admin_id: int = Field(gt=0)
+    current_password: Optional[str] = Field(default=None, max_length=256)
+    google_credential: Optional[str] = Field(default=None, min_length=32, max_length=8192)
+
+    @field_validator("google_credential", mode="before")
+    @classmethod
+    def _credential(cls, v):
+        if v == "":
+            return None
+        return v
+
+
 class RegistrationSetting(BaseModel):
     enabled: bool
 
