@@ -27,6 +27,10 @@ class LoginRequest(BaseModel):
     password: str = Field(min_length=1, max_length=256)
 
 
+class GoogleCredential(BaseModel):
+    credential: str = Field(min_length=32, max_length=8192)
+
+
 class RegisterRequest(BaseModel):
     username: str
     password: str = Field(max_length=256)

@@ -42,6 +42,7 @@ Every alert comes with the evidence behind it, a risk score, and attack-specific
 | **Honest coverage panel** | Shows which attack types your connected sources can see, which they cannot, and what extra source would cover them. |
 | **Demo and Live modes** | Simulated traffic switches off automatically when a real source connects, so real and simulated data never mix. |
 | **Role-based access** | Viewer, Analyst, and Admin roles, an audit log, and login rate limiting. |
+| **Google sign-in** | Verify Google ID tokens on the backend, create a private workspace for a new Google user, and let existing users explicitly link Google to their account. |
 | **Reports and uploads** | Analyse network-flow CSV files, and export PDF or CSV reports. |
 | **Assistant** | A rule-based chatbot that answers questions from your own data. It calls no external service and needs no API key. |
 | **Docker lab** | A contained, deliberately vulnerable target website, the collector, and NetSentinel, started with one command. |
@@ -70,7 +71,7 @@ The lab runs entirely on your computer and binds to `localhost`. It starts NetSe
 **1. Start the lab** from the repository root. The first run downloads and builds images, which takes several minutes.
 
 ```bash
-docker compose -f lab/docker-compose.lab.yml up --build -d
+docker compose --env-file .env -f lab/docker-compose.lab.yml up --build -d
 ```
 
 **2. Open the services.**
@@ -85,7 +86,7 @@ docker compose -f lab/docker-compose.lab.yml up --build -d
 **4. Confirm the connection.** In NetSentinel, open **Sources**. *Lab web server (DVWA)* should show **Connected**, and the Overview switches to **Live mode**. If it stays on *Waiting*, check the collector:
 
 ```bash
-docker compose -f lab/docker-compose.lab.yml logs collector
+docker compose --env-file .env -f lab/docker-compose.lab.yml logs collector
 ```
 
 **5. Attack your own lab.** In DVWA, try one of these, then watch **Alerts** update within seconds:
@@ -102,8 +103,8 @@ Prefer automation? Run `python lab/attack_demo.py` from the repository root. It 
 **Stop the lab:**
 
 ```bash
-docker compose -f lab/docker-compose.lab.yml down        # keeps lab data
-docker compose -f lab/docker-compose.lab.yml down -v     # also deletes lab data
+docker compose --env-file .env -f lab/docker-compose.lab.yml down        # keeps lab data
+docker compose --env-file .env -f lab/docker-compose.lab.yml down -v     # also deletes lab data
 ```
 
 <details>
@@ -112,7 +113,7 @@ docker compose -f lab/docker-compose.lab.yml down -v     # also deletes lab data
 <br>
 
 ```bash
-docker compose -f lab/docker-compose.lab.yml up --build -d --no-deps frontend
+docker compose --env-file .env -f lab/docker-compose.lab.yml up --build -d --no-deps frontend
 ```
 
 This rebuilds and recreates only the frontend container and keeps the backend and its data volumes.
@@ -172,13 +173,16 @@ On a fresh install NetSentinel starts in **Demo mode** with simulated traffic. T
 
 This builds the backend and a Nginx-served frontend. The backend image runs with `APP_ENV=production`, which **refuses to start** with weak defaults.
 
-**1.** Copy `.env.example` to `.env` and set these three values:
+**1.** Copy `.env.example` to `.env` and set the required values. Add `GOOGLE_CLIENT_ID` if you want Google sign-in:
 
 ```ini
 JWT_SECRET=<a long random value>
 ADMIN_PASSWORD=<a strong password>
 CORS_ORIGINS=http://localhost:8080
+GOOGLE_CLIENT_ID=<your Web application client ID>
 ```
+
+Google sign-in is optional. In Google Cloud Console, configure the OAuth consent screen and add `http://localhost:8080` under **Authorized JavaScript origins** for the Web application client. The client secret is not used by this ID-token sign-in flow and must never be placed in frontend code or committed. Pass the repository-root `.env` to Compose explicitly with `--env-file .env`. After changing `GOOGLE_CLIENT_ID`, recreate the backend with `docker compose --env-file .env -p argus-lab -f lab/docker-compose.lab.yml up -d --no-deps backend`.
 
 Generate a secret with `python -c "import secrets; print(secrets.token_urlsafe(48))"`.
 
@@ -261,7 +265,7 @@ The web-log connector covers **SQL injection, XSS, brute force (web logins), pat
 
 **Roles**
 
-Each self-registered account gets a private workspace and becomes its Admin. An Admin-created account joins that Admin's workspace with the assigned role. Dashboard data and source connections are isolated by workspace; existing lab data stays in the original Admin workspace.
+Each new Google sign-up gets a private workspace and becomes its Admin. Workspace members are created by that Admin and sign in with the username and password they are given. Dashboard data and source connections are isolated by workspace; existing lab data stays in its current workspace. Existing password accounts can link Google from Account settings.
 
 | Role | Can do |
 | --- | --- |
@@ -280,7 +284,8 @@ Settings come from environment variables or a `.env` file in the repository root
 | `APP_ENV` | `development` (default) or `production`, which enforces the security checks below. |
 | `JWT_SECRET` | Token signing key. Required in production. If empty in development, a temporary key is used and sessions reset on restart. |
 | `ADMIN_USERNAME` / `ADMIN_PASSWORD` | First administrator. In development an empty password is generated and printed once. |
-| `ALLOW_SELF_REGISTRATION` | Lets visitors create a private workspace, where they become its Admin. The platform Admin can also toggle registration in the UI. |
+| `ALLOW_SELF_REGISTRATION` | Lets visitors create a private workspace through Google sign-in, where they become its Admin. The platform Admin can toggle new workspace creation in the UI. |
+| `GOOGLE_CLIENT_ID` | Optional Google Identity Services Web client ID. It is public and is used by the backend to verify ID-token audience. Do not configure the client secret for this sign-in flow. |
 | `CORS_ORIGINS` | Browser origins allowed to call the API. No wildcard in production. |
 | `SIMULATION_ENABLED` | Starts the simulator on a fresh install. In Auto mode it pauses when a real source connects. |
 | `DB_PATH`, `MODEL_DIR`, `WEB_MODEL_DIR` | Locations of the SQLite database and model files. |
@@ -374,7 +379,7 @@ Sign in as `admin`. If `ADMIN_PASSWORD` was empty when NetSentinel first started
 
 <br>
 
-Check that all services are running with `docker compose -f lab/docker-compose.lab.yml ps`, then read the collector log with `docker compose -f lab/docker-compose.lab.yml logs collector`. The collector only reads traffic that passes through the target proxy on port **8081**, so make sure you browse DVWA there.
+Check that all services are running with `docker compose --env-file .env -f lab/docker-compose.lab.yml ps`, then read the collector log with `docker compose --env-file .env -f lab/docker-compose.lab.yml logs collector`. The collector only reads traffic that passes through the target proxy on port **8081**, so make sure you browse DVWA there.
 
 </details>
 

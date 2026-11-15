@@ -3,6 +3,9 @@ from user input except for fixed, whitelisted column names)."""
 from __future__ import annotations
 
 import json
+import hashlib
+import re
+import secrets
 import time
 from datetime import datetime, timezone
 
@@ -73,6 +76,75 @@ class Repository:
             user = c.execute("INSERT INTO users(username,password_hash,role,created_at,full_name,workspace_id) VALUES(?,?,?,?,?,?)",
                              (username, password_hash, "admin", time.time(), full_name or None, wid))
             return user.lastrowid, wid
+
+    @staticmethod
+    def _user_row(c, user_id):
+        return _row(c.execute("SELECT users.*,workspaces.name AS workspace_name FROM users "
+                              "LEFT JOIN workspaces ON workspaces.id=users.workspace_id WHERE users.id=?",
+                              (user_id,)).fetchone())
+
+    def get_user_by_google_subject(self, subject):
+        with self.db.connect() as c:
+            row = c.execute("SELECT users.id FROM auth_identities JOIN users ON users.id=auth_identities.user_id "
+                            "WHERE auth_identities.provider='google' AND auth_identities.subject=?", (subject,)).fetchone()
+            return self._user_row(c, row[0]) if row else None
+
+    def get_google_identity(self, user_id):
+        with self.db.connect() as c:
+            return _row(c.execute("SELECT email,email_verified,created_at FROM auth_identities "
+                                  "WHERE user_id=? AND provider='google'", (user_id,)).fetchone())
+
+    def register_google_user(self, subject, email, name, password_hash):
+        """Create a Google-only Admin and its private workspace atomically; return (user_id, created)."""
+        with self.db.connect() as c:
+            c.execute("BEGIN IMMEDIATE")
+            existing = c.execute("SELECT user_id FROM auth_identities WHERE provider='google' AND subject=?",
+                                 (subject,)).fetchone()
+            if existing:
+                return existing[0], False
+
+            local = email.split("@", 1)[0].lower()
+            local = re.sub(r"[^a-z0-9_.-]+", "_", local).strip("._-") or "member"
+            base = f"g_{local}"[:48]
+            username = base
+            if c.execute("SELECT 1 FROM users WHERE username=? COLLATE NOCASE", (username,)).fetchone():
+                username = f"{base[:39]}_{hashlib.sha256(subject.encode()).hexdigest()[:8]}"
+            while c.execute("SELECT 1 FROM users WHERE username=? COLLATE NOCASE", (username,)).fetchone():
+                username = f"{base[:38]}_{secrets.token_hex(5)}"
+
+            display_name = " ".join((name or "").split())[:64] or None
+            if display_name and ("<" in display_name or ">" in display_name or any(ord(ch) < 32 for ch in display_name)):
+                display_name = None
+            cur = c.execute("INSERT INTO workspaces(name,created_by,created_at) VALUES(?,?,?)",
+                            (f"{(display_name or username)[:80]}'s workspace", username, time.time()))
+            workspace_id = cur.lastrowid
+            user_cur = c.execute("INSERT INTO users(username,password_hash,role,created_at,full_name,workspace_id) "
+                                 "VALUES(?,?,'admin',?,?,?)",
+                                 (username, password_hash, time.time(), display_name, workspace_id))
+            user_id = user_cur.lastrowid
+            c.execute("INSERT INTO auth_identities(provider,subject,user_id,email,email_verified,created_at) "
+                      "VALUES('google',?,?,?,1,?)", (subject, user_id, email, time.time()))
+            return user_id, True
+
+    def link_google_identity(self, user_id, subject, email):
+        """Link one Google subject to a user in this repository's workspace."""
+        clause, vals = self._ws("u")
+        with self.db.connect() as c:
+            c.execute("BEGIN IMMEDIATE")
+            user = c.execute(f"SELECT u.id FROM users u WHERE u.id=?{clause}", (user_id, *vals)).fetchone()
+            if not user:
+                return "user_not_found"
+            by_subject = c.execute("SELECT user_id FROM auth_identities WHERE provider='google' AND subject=?",
+                                   (subject,)).fetchone()
+            if by_subject and by_subject[0] != user_id:
+                return "identity_in_use"
+            current = c.execute("SELECT subject,email FROM auth_identities WHERE provider='google' AND user_id=?",
+                                 (user_id,)).fetchone()
+            if current:
+                return "already_linked" if current[0] == subject else "different_identity_linked"
+            c.execute("INSERT INTO auth_identities(provider,subject,user_id,email,email_verified,created_at) "
+                      "VALUES('google',?,?,?,1,?)", (subject, user_id, email, time.time()))
+            return "linked"
 
     def get_user_by_name(self, username):
         with self.db.connect() as c:

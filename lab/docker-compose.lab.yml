@@ -17,6 +17,7 @@ services:
       ADMIN_PASSWORD: "Lab-Admin-Passw0rd!"
       JWT_SECRET: "lab-only-jwt-secret-lab-only-jwt-secret-1234567890"
       CORS_ORIGINS: "http://localhost:8080"
+      GOOGLE_CLIENT_ID: "${GOOGLE_CLIENT_ID:-}"
       ARGUS_BOOTSTRAP_SOURCE_KEY: "agk_LAB_ONLY_not_a_secret_0123456789abcdefghijk"
       ARGUS_BOOTSTRAP_SOURCE_NAME: "Lab web server (DVWA)"
       SIMULATION_ENABLED: "true"                # Auto mode: switches itself off once the collector connects

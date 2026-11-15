@@ -61,6 +61,9 @@ export async function download(path, filename) {
 export const api = {
   authConfig: () => request('/api/auth/config'),
   login: (username, password) => request('/api/auth/login', { method: 'POST', body: { username, password } }),
+  googleLogin: (credential) => request('/api/auth/google', { method: 'POST', body: { credential } }),
+  googleIdentity: () => request('/api/auth/google/identity'),
+  linkGoogle: (credential) => request('/api/auth/google/link', { method: 'POST', body: { credential } }),
   register: (username, password, full_name) => request('/api/auth/register', { method: 'POST', body: { username, password, full_name: full_name || null } }),
   me: () => request('/api/auth/me'),
   changePassword: (current_password, new_password) => request('/api/auth/change-password', { method: 'POST', body: { current_password, new_password } }),

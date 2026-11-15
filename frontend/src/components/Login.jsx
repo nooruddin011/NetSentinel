@@ -8,6 +8,7 @@ import FaqAccordion from './FaqAccordion'
 import ImageScatter from './ImageScatter'
 import LoginFeatureGrid from './LoginFeatureGrid'
 import WaveGridBackground from './WaveGridBackground'
+import GoogleSignInButton from './GoogleSignInButton'
 import { PasswordHelp, passwordRules } from './ui'
 
 function Field({ icon: Icon, label, children, trail }) {
@@ -92,6 +93,18 @@ export default function Login({ onLogin, notice }) {
     }
   }
 
+  const googleCredential = async (credential) => {
+    if (busy) return
+    setBusy(true); setError(null)
+    try {
+      const res = await api.googleLogin(credential)
+      onLogin(res)
+    } catch (err) {
+      setError({ text: err.message, kind: err.status === 403 ? 'blocked' : 'error' })
+      setBusy(false)
+    }
+  }
+
   const eye = (
     <button type="button" className="trail" onClick={() => setShow(!show)} aria-label={show ? 'Hide password' : 'Show password'}>
       {show ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -158,17 +171,17 @@ export default function Login({ onLogin, notice }) {
               <div className="auth-popover-heading">
                 <div>
                   <p className="auth-popover-eyebrow">{registering ? 'Join the workspace' : 'Secure access'}</p>
-                  <h2 id="auth-popover-title">{registering ? 'Create your account' : 'Welcome back'}</h2>
+                  <h2 id="auth-popover-title">{registering ? 'Create your workspace' : 'Welcome back'}</h2>
                 </div>
                 <button className="icon-btn" type="button" onClick={() => setAuthOpen(false)} aria-label="Close sign-in panel"><X size={17} /></button>
               </div>
-              <p className="sub">{registering ? 'Create a private workspace and manage it as its Admin.' : `Sign in to your ${BRAND.name} console.`}</p>
+              <p className="sub">{registering ? 'Continue with Google to create a private workspace. You will be its Admin.' : `Sign in to your ${BRAND.name} console.`}</p>
 
               {cfg.registration_enabled && (
                 <div className="auth-tabs" role="tablist" data-pos={registering ? 1 : 0}>
                   <span className="slider" aria-hidden="true" />
                   <button type="button" role="tab" aria-selected={!registering} className={!registering ? 'on' : ''} onClick={() => setMode('signin')}><LogIn size={15} /> Sign in</button>
-                  <button type="button" role="tab" aria-selected={registering} className={registering ? 'on' : ''} onClick={() => setMode('register')}><UserPlus size={15} /> Create account</button>
+                  <button type="button" role="tab" aria-selected={registering} className={registering ? 'on' : ''} onClick={() => setMode('register')}><UserPlus size={15} /> Create workspace</button>
                 </div>
               )}
 
@@ -180,7 +193,8 @@ export default function Login({ onLogin, notice }) {
                 </div>
               )}
 
-              <form className="auth-form" onSubmit={submit} noValidate>
+              {registering && <p className="auth-note">Workspace members receive their username and password from their Admin.</p>}
+              <form className={`auth-form${registering ? ' google-workspace-only' : ''}`} onSubmit={submit} noValidate>
                 {registering && <Field icon={User} label="Full name (optional)"><input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="e.g. Maria Lopez" autoComplete="name" maxLength={64} /></Field>}
                 <Field icon={User} label="Username"><input autoFocus value={username} onChange={(e) => setUsername(e.target.value)} placeholder={registering ? 'Pick a username (no spaces)' : 'Your username'} autoComplete="username" maxLength={64} /></Field>
                 {registering && username && !usernameOk && <div className="auth-note" style={{ textAlign: 'left', color: 'var(--danger)' }}>Use 3–64 characters: letters, digits and _ . - @ (no spaces).</div>}
@@ -197,9 +211,19 @@ export default function Login({ onLogin, notice }) {
                 <button className="btn block" disabled={!canSubmit}>{busy ? 'Please wait…' : registering ? 'Create account' : 'Sign in'}</button>
               </form>
 
-              {registering
-                ? <p className="auth-note">An <b>Admin</b> can upgrade your access to <b>Analyst</b>.</p>
-                : !cfg.registration_enabled && <p className="auth-note">Accounts are created by an Admin. Contact your administrator for access.</p>}
+              {cfg.google_client_id && <>
+                {!registering && <div className="google-auth-divider"><span>or continue with</span></div>}
+                <GoogleSignInButton
+                  clientId={cfg.google_client_id}
+                  mode={registering ? 'signup' : 'signin'}
+                  theme={theme}
+                  onCredential={googleCredential}
+                  onError={(err) => setError({ text: err.message, kind: 'error' })}
+                />
+              </>}
+
+              {registering && !cfg.google_client_id && <p className="auth-note">Google workspace sign-in is not configured yet. Contact the site administrator.</p>}
+              {!registering && !cfg.registration_enabled && <p className="auth-note">Accounts are created by an Admin. Contact your administrator for access.</p>}
             </div>
           )}
         </div>

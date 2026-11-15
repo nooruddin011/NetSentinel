@@ -21,10 +21,13 @@ Authenticated requests are scoped to the caller's workspace. Self-registration c
 | POST | `/api/alerts/{alert_id}/mitigate` | Analyst | Apply a mitigation **in simulation**: records it, generates rule text, may add to blocklist |
 | GET | `/api/alerts/{alert_id}/recommendations` | Viewer | Measured detector comparison + mitigation options for the alert's attack type |
 | POST | `/api/auth/change-password` | Any signed-in user | Change own password; **ends all other sessions** and returns a fresh token |
-| GET | `/api/auth/config` | Public | Login-page settings: app name and whether self-registration is on |
+| GET | `/api/auth/config` | Public | Login settings: app name, self-registration state, and optional Google Web client ID |
+| POST | `/api/auth/google` | Public | Verify Google ID token and create a private workspace or sign in an already-linked user; returns the normal NetSentinel JWT |
+| GET | `/api/auth/google/identity` | Any signed-in user | Whether the current user has linked Google, and the linked email |
+| POST | `/api/auth/google/link` | Any signed-in user | Link a verified Google identity to the current account; identities already linked elsewhere are rejected |
 | POST | `/api/auth/login` | Public | Credentials → JWT. 401 wrong credentials; **403 account disabled** (only revealed with the correct password); 429 throttled |
 | GET | `/api/auth/me` | Any signed-in user | Current user incl. last sign-in |
-| POST | `/api/auth/register` | Public | Self-registration → creates a private workspace and its Admin, returns a JWT (rate-limited per IP; 403 when switched off; 409 username taken) |
+| POST | `/api/auth/register` | Public | Legacy password self-registration endpoint; returns 403 because public workspace creation uses Google sign-in and local accounts are provisioned by a workspace Admin |
 | GET | `/api/auth/users` | Admin | List users |
 | POST | `/api/auth/users` | Admin | Create user with any role |
 | DELETE | `/api/auth/users/{user_id}` | Admin | Delete a user (not yourself, not the last Admin) |

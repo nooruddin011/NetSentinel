@@ -16,9 +16,9 @@ Install **Docker Desktop** (free for personal and educational use). On Windows k
 ## 1. Start everything
 From the project folder:
 ```bash
-docker compose -f lab/docker-compose.lab.yml up --build -d
+docker compose --env-file .env -f lab/docker-compose.lab.yml up --build -d
 ```
-The first run downloads images and builds Argus (several minutes). Check all services are up: `docker compose -f lab/docker-compose.lab.yml ps`.
+The first run downloads images and builds Argus (several minutes). Check all services are up: `docker compose --env-file .env -f lab/docker-compose.lab.yml ps`.
 
 | What | Address | Login |
 |---|---|---|
@@ -32,7 +32,7 @@ The first run downloads images and builds Argus (several minutes). Check all ser
 
 ## 3. Confirm Argus is connected
 Dashboard → **Sources**: *Lab web server (DVWA)* should show **Connected**. The **Overview** switches to **Live mode** and the *simulated demo feed* turns itself off.
-If it stays on "Waiting": `docker compose -f lab/docker-compose.lab.yml logs collector`.
+If it stays on "Waiting": `docker compose --env-file .env -f lab/docker-compose.lab.yml logs collector`.
 
 ## 4. Attack it in the browser
 In DVWA (left menu) try these. Each produces a request with the payload in the URL, so it appears in the access log:
@@ -56,7 +56,7 @@ python lab/attack_demo.py sqli xss brute   # only some
 ```
 Real tools in a throwaway Kali container:
 ```bash
-docker compose -f lab/docker-compose.lab.yml --profile attacker run --rm attacker
+docker compose --env-file .env -f lab/docker-compose.lab.yml --profile attacker run --rm attacker
 # inside it (takes a few minutes to install the first time):
 sqlmap -u "http://target-proxy/vulnerabilities/sqli/?id=1&Submit=Submit" --batch --level=1
 nikto -h http://target-proxy
@@ -67,5 +67,5 @@ nikto -h http://target-proxy
 * All requests appear to come from the Docker gateway address (Docker Desktop's NAT), so every attacker shares one IP; on Linux you see real addresses.
 * Verify the detection chain **without Docker**: `python scripts/verify_connector_pipeline.py`.
 * If the `ghcr.io/digininja/dvwa` image changes or is unavailable, replace the `dvwa` and `db` services with the single-container image `vulnerables/web-dvwa` (service name must stay `dvwa`).
-* Stop: `docker compose -f lab/docker-compose.lab.yml down`. Wipe all lab data too: add `-v`.
+* Stop: `docker compose --env-file .env -f lab/docker-compose.lab.yml down`. Wipe all lab data too: add `-v`.
 * The passwords and API key in the compose file are published and for this lab only. Argus refuses to start with that pre-shared key when `APP_ENV=production`.

@@ -5,6 +5,7 @@ import { roleLabel } from '../brand'
 import { useTheme } from '../theme'
 import { useToast } from '../feedback'
 import { Avatar, Card, ErrorNote, PageHead, PasswordHelp, RoleBadge, fmtTime, passwordRules } from './ui'
+import GoogleSignInButton from './GoogleSignInButton'
 
 const ROLE_INFO = {
   viewer: 'Read-only: dashboards, alerts, model metrics, reports and the assistant.',
@@ -17,6 +18,13 @@ export default function Account({ user, onSession, onLogout }) {
   const toast = useToast()
   const [profile, setProfile] = useState(user)
   useEffect(() => { api.me().then(setProfile).catch(() => {}) }, [])
+  const [authConfig, setAuthConfig] = useState(null)
+  const [googleIdentity, setGoogleIdentity] = useState(null)
+  const [googleError, setGoogleError] = useState('')
+  useEffect(() => {
+    api.authConfig().then(setAuthConfig).catch(() => {})
+    api.googleIdentity().then(setGoogleIdentity).catch(() => {})
+  }, [])
   const [cur, setCur] = useState('')
   const [pw, setPw] = useState('')
   const [pw2, setPw2] = useState('')
@@ -37,6 +45,15 @@ export default function Account({ user, onSession, onLogout }) {
     setBusy(false)
   }
 
+  const linkGoogle = async (credential) => {
+    setGoogleError('')
+    try {
+      const result = await api.linkGoogle(credential)
+      setGoogleIdentity({ linked: true, email: result.email })
+      toast('Google sign-in linked to this account.')
+    } catch (err) { setGoogleError(err.message) }
+  }
+
   return (
     <>
       <PageHead eyebrow="Account" title="My account" subtitle="Your profile, appearance and password." />
@@ -54,6 +71,17 @@ export default function Account({ user, onSession, onLogout }) {
           <div className="row" style={{ marginTop: '1rem' }}>
             <button className="btn ghost sm" onClick={toggle}>{theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />} {theme === 'dark' ? 'Light' : 'Dark'} theme</button>
             <button className="btn ghost sm" onClick={() => onLogout()}><LogOut size={14} /> Sign out</button>
+          </div>
+          <div className="google-link-section">
+            <h3>Google sign-in</h3>
+            {googleIdentity?.linked
+              ? <p className="auth-note">Connected as <b>{googleIdentity.email}</b>. You can use this Google account the next time you sign in.</p>
+              : <>
+                <p className="auth-note">Link your Google account to sign in to this existing workspace account.</p>
+                {authConfig?.google_client_id && <GoogleSignInButton clientId={authConfig.google_client_id} theme={theme} onCredential={linkGoogle} onError={(err) => setGoogleError(err.message)} />}
+                {!authConfig?.google_client_id && authConfig && <p className="auth-note">Google sign-in has not been configured by the server administrator.</p>}
+                {googleError && <ErrorNote error={googleError} />}
+              </>}
           </div>
         </Card>
         <Card title="Change password">

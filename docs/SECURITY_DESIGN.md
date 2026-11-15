@@ -11,7 +11,7 @@ A security product must itself be hard to attack. What is implemented, and what 
 | Authorisation | role hierarchy enforced server-side on every route (`require(role)`); disabled users' tokens stop working immediately; cannot demote/disable the last admin |
 | Workspace isolation | every account belongs to one workspace; sources, events, alerts, uploads, mitigations, blocklists, audit entries, analytics, and live WebSocket events are scoped server-side; source API keys ingest into their owning workspace |
 | Sessions | short-lived tokens (default 60 min) in `sessionStorage`; each token embeds a fingerprint of the password hash, so **changing or resetting a password immediately ends every older session**; disabled/deleted users are rejected on the next request; WebSocket auth by first message, `Origin` allow-list, periodic re-validation |
-| Sign-up | self-registration creates a private workspace and makes the creator its **Admin** (the payload has no role or workspace field), is rate-limited to 10 per IP per hour, can be switched off by the platform Admin, and enforces the password policy (10+ chars, mixed case, digit, not a common password, must not contain the username) |
+| Google identity | Google ID tokens are checked server-side for signature, issuer, expiry, verified email, and configured audience. The stable `sub` is used for identity; linking requires an authenticated account and identities are not merged by email alone. Google-only sign-up creates a private Admin workspace and is subject to the registration switch and sign-up rate limit. |
 | Account state | a disabled user sees "account disabled" **only after supplying the correct password**, so the message cannot be used to discover usernames; Admins cannot demote, disable or delete themselves or the last Admin |
 | Data ownership | workspace data is private to its members; upload job IDs outside the workspace return 404 (no probing); workspace Admins can manage their workspace's users and sources |
 | Connector keys | `agk_` + 256 random bits, only the SHA-256 hash is stored and the key is shown once; rotate (old key dies instantly), revoke, delete; failed keys throttled per IP (429); per-source event rate limit; batch-size and body-size caps (413 before parsing); a dashboard JWT is **not** accepted on the ingest door and an API key is not accepted anywhere else |
@@ -39,7 +39,7 @@ A security product must itself be hard to attack. What is implemented, and what 
 
 * **No TLS inside the app** — terminate HTTPS at a reverse proxy/load balancer. Without TLS, JWTs and passwords cross the network in clear text.
 * A stolen token stays valid until it expires unless the user is disabled or their password changes (there is no per-token revocation list or "sign out everywhere" button). A refresh-token/denylist scheme would add that.
-* Self-registration has no e-mail verification and no CAPTCHA; the per-IP limit is the only abuse control. Switch it off for closed deployments.
+* Google workspace sign-up requires a Google-verified email and is rate-limited per IP; it has no CAPTCHA. Switch public registration off for closed deployments.
 * There is no "forgot password" e-mail flow; an Admin resets passwords.
 * The login throttle, stream hub and cache are in-memory, per process.
 * SQLite is single-node. Use PostgreSQL for multi-instance deployments.

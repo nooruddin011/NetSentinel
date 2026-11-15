@@ -8,6 +8,8 @@ pandas>=2.1
 scikit-learn>=1.4
 joblib>=1.3
 reportlab>=4.0
+google-auth>=2.29,<3
+CacheControl>=0.14,<1
 
 # Extra models (optional but recommended: the trainer uses them automatically when importable)
 xgboost>=2.0

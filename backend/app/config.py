@@ -88,6 +88,7 @@ class Settings:
     bootstrap_source_name: str = "Lab web server"
     login_max_failures: int = 5
     login_lockout_seconds: int = 900
+    google_client_id: str = ""
 
     @property
     def is_production(self) -> bool:
@@ -131,6 +132,7 @@ def load_settings() -> Settings:
         bootstrap_source_name=os.getenv("ARGUS_BOOTSTRAP_SOURCE_NAME", "Lab web server"),
         login_max_failures=_int("LOGIN_MAX_FAILURES", 5),
         login_lockout_seconds=_int("LOGIN_LOCKOUT_SECONDS", 900),
+        google_client_id=os.getenv("GOOGLE_CLIENT_ID", "").strip(),
     )
     if s.jwt_secret.strip().lower() in PLACEHOLDER_SECRETS:
         if s.is_production:

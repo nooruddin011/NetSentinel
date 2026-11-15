@@ -26,6 +26,18 @@ CREATE TABLE IF NOT EXISTS users (
     last_login REAL,
     workspace_id INTEGER
 );
+CREATE TABLE IF NOT EXISTS auth_identities (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    provider TEXT NOT NULL,
+    subject TEXT NOT NULL,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    email TEXT NOT NULL,
+    email_verified INTEGER NOT NULL DEFAULT 0,
+    created_at REAL NOT NULL,
+    UNIQUE(provider, subject),
+    UNIQUE(user_id, provider)
+);
+CREATE INDEX IF NOT EXISTS idx_auth_identities_user ON auth_identities(user_id);
 CREATE TABLE IF NOT EXISTS events (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     workspace_id INTEGER,
