@@ -96,7 +96,7 @@ function Users({ me }) {
   )
 }
 
-function Settings() {
+function Settings({ user }) {
   const toast = useToast()
   const [sys, setSys] = useState(null)
   const [sim, setSim] = useState(null)
@@ -183,7 +183,7 @@ export default function Admin({ user }) {
     <>
       <PageHead eyebrow="Manage" title="Administration" subtitle="Users, settings, system status and the audit trail." />
       <Tabs value={tab} onChange={setTab} tabs={[{ id: 'users', label: 'Users' }, { id: 'settings', label: 'Settings' }, { id: 'system', label: 'System' }, { id: 'block', label: 'Blocklist & mitigations' }, { id: 'audit', label: 'Audit log' }]} />
-      {tab === 'users' && <Users me={user} />}{tab === 'settings' && <Settings />}{tab === 'system' && <System />}{tab === 'block' && <Blocklist />}{tab === 'audit' && <Audit />}
+      {tab === 'users' && <Users me={user} />}{tab === 'settings' && <Settings user={user} />}{tab === 'system' && <System />}{tab === 'block' && <Blocklist />}{tab === 'audit' && <Audit />}
     </>
   )
 }

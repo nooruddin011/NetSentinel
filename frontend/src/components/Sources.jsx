@@ -160,6 +160,9 @@ function SourceCard({ s, admin, reload }) {
   const confirm = useConfirm()
   const [edit, setEdit] = useState(false)
   const [newKey, setNewKey] = useState(null)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [deleteText, setDeleteText] = useState('')
+  const [deleteBusy, setDeleteBusy] = useState(false)
   const p = s.policy || {}
   const act = async (fn, msg) => { try { const r = await fn(); if (msg) toast(msg); reload(); return r } catch (e) { toast(e.message, 'error') } return null }
   const rotate = async () => {
@@ -167,7 +170,15 @@ function SourceCard({ s, admin, reload }) {
     if (r.ok) { const out = await act(() => api.rotateSource(s.id)); if (out) setNewKey(out) }
   }
   const revoke = async () => { const r = await confirm({ title: 'Revoke this source?', danger: true, confirmLabel: 'Revoke', body: 'The collector is cut off immediately (it will receive “401”). You can re-activate it later by rotating the key.' }); if (r.ok) act(() => api.revokeSource(s.id), 'Source revoked') }
-  const remove = async () => { const r = await confirm({ title: `Delete “${s.name}”?`, danger: true, confirmLabel: 'Delete', body: 'The key is destroyed. Alerts and events already recorded are kept.' }); if (r.ok) act(() => api.deleteSource(s.id), 'Source deleted') }
+  const remove = () => { setDeleteText(''); setDeleteOpen(true) }
+  const confirmRemove = async (event) => {
+    event.preventDefault()
+    if (deleteText !== 'CONFIRM' || deleteBusy) return
+    setDeleteBusy(true)
+    try { await api.deleteSource(s.id); toast('Source deleted'); reload(); setDeleteOpen(false) }
+    catch (error) { toast(error.message, 'error') }
+    setDeleteBusy(false)
+  }
   return (
     <article className="src-card">
       <header className="row" style={{ justifyContent: 'space-between', flexWrap: 'nowrap' }}>
@@ -194,6 +205,13 @@ function SourceCard({ s, admin, reload }) {
           <button className="btn ghost sm" onClick={remove} aria-label={`Delete ${s.name}`}><Trash2 size={13} /></button>
         </div>)}
       {edit && <EditModal source={s} onClose={() => setEdit(false)} onSaved={reload} />}
+      {deleteOpen && <Modal title={`Delete “${s.name}”?`} onClose={() => { if (!deleteBusy) setDeleteOpen(false) }}>
+        <form className="grid source-delete-confirm" onSubmit={confirmRemove}>
+          <p className="muted">This permanently deletes the connector and destroys its API key. Existing alerts and events will be kept. Type <b>CONFIRM</b> exactly to continue.</p>
+          <label className="field">Confirmation<input value={deleteText} onChange={(event) => setDeleteText(event.target.value)} autoComplete="off" autoCapitalize="off" spellCheck={false} placeholder="Type CONFIRM" autoFocus /></label>
+          <div className="row source-delete-actions"><button type="button" className="btn ghost" onClick={() => setDeleteOpen(false)} disabled={deleteBusy}>Cancel</button><button className="btn danger" disabled={deleteBusy || deleteText !== 'CONFIRM'}><Trash2 size={14} /> {deleteBusy ? 'Deleting…' : 'Delete source'}</button></div>
+        </form>
+      </Modal>}
       {newKey && <Modal title="New API key" onClose={() => setNewKey(null)} wide><KeyPanel apiKey={newKey.api_key} source={newKey.source} rotated onDone={() => setNewKey(null)} /></Modal>}
     </article>
   )

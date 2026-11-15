@@ -216,8 +216,8 @@ pre.code{background:var(--code);border:1px solid var(--border);border-radius:14p
 .drawer-bg,.modal-bg{position:fixed;inset:0;background:rgba(6,8,7,.62);backdrop-filter:blur(6px);z-index:40;animation:fade .25s both}
 .drawer-bg{display:flex;justify-content:flex-end}.modal-bg{display:grid;place-items:center;z-index:60;padding:1rem}
 .drawer{width:min(680px,100%);background:var(--bg);border-left:1px solid var(--border-strong);height:100%;overflow:auto;padding:1.5rem;display:flex;flex-direction:column;gap:1.1rem;animation:slide .4s var(--ease) both;box-shadow:var(--shadow-pop)}
-.modal{background:var(--panel);border:1px solid var(--border-strong);border-radius:26px;padding:1.5rem;width:min(460px,100%);box-shadow:var(--shadow-pop);animation:pop .3s var(--ease) both}
-.modal.wide{width:min(740px,100%);max-height:92vh;overflow:auto}.modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.1rem}
+.modal{background:var(--panel);border:1px solid var(--border-strong);border-radius:26px;padding:1.5rem;width:min(460px,100%);max-height:min(92vh,92svh);overflow-y:auto;overscroll-behavior:contain;box-shadow:var(--shadow-pop);animation:pop .3s var(--ease) both}
+.modal.wide{width:min(740px,100%)}.modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.1rem}
 .toasts{position:fixed;right:1.2rem;top:1.2rem;display:flex;flex-direction:column;gap:.6rem;z-index:80;max-width:min(400px,calc(100vw - 2rem))}
 .toast{display:flex;gap:.7rem;align-items:flex-start;background:var(--panel2);border:1px solid var(--border-strong);border-radius:16px;padding:.8rem 1rem;box-shadow:var(--shadow-pop);font-size:.86rem;animation:slide .45s var(--ease) both}
 .toast svg{flex:none;margin-top:2px;color:var(--ok)}.toast.error svg{color:var(--danger)}.toast.info svg{color:var(--ice)}
@@ -909,7 +909,7 @@ pre.code{background:var(--code);border:1px solid var(--border);border-radius:14p
   grid-template-columns:repeat(12,minmax(0,1fr));
   align-items:start;
   column-gap:1rem;
-  row-gap:.15rem;
+  row-gap:1rem;
 }
 .shell .page[data-view="overview"]>.page-head,
 .shell .page[data-view="overview"]>.banner,
@@ -917,14 +917,14 @@ pre.code{background:var(--code);border:1px solid var(--border);border-radius:14p
 .shell .page[data-view="overview"]>.overview-bento-grid,
 .shell .page[data-view="overview"]>.overview-tables{grid-column:1/-1}
 .shell .page[data-view="overview"]>.overview-heatmap{grid-column:1/-1;min-width:0;margin:0}
-.shell .page[data-view="overview"]>.overview-metrics{grid-column:1/-1;min-width:0;margin:0 0 1rem}
+.shell .page[data-view="overview"]>.overview-metrics{grid-column:1/-1;min-width:0;margin:0}
 .shell .page[data-view="overview"]>.overview-metrics .stats{grid-template-columns:repeat(3,minmax(0,1fr));height:100%}
 .shell .page[data-view="overview"]>.overview-metrics .stat{padding:.72rem .8rem;border-right:1px solid var(--console-line);border-bottom:1px solid var(--console-line)}
 .shell .page[data-view="overview"]>.overview-metrics .stat:nth-child(3n){border-right:0}
 .shell .page[data-view="overview"]>.overview-metrics .stat:nth-last-child(-n+3){border-bottom:0}
 .shell .page[data-view="overview"]>.overview-heatmap .card,
 .shell .page[data-view="overview"]>.overview-metrics{height:100%;min-height:220px}
-.shell .overview-bento-grid{grid-template-columns:repeat(12,minmax(0,1fr));margin:0 0 1rem}
+.shell .overview-bento-grid{grid-template-columns:repeat(12,minmax(0,1fr));margin:0}
 .shell .overview-bento-grid>.card:nth-child(1){grid-column:span 7}
 .shell .overview-bento-grid>.card:nth-child(2){grid-column:span 5}
 .shell .overview-bento-grid>.card:nth-child(3){grid-column:span 5}
@@ -1049,7 +1049,7 @@ pre.code{background:var(--code);border:1px solid var(--border);border-radius:14p
 .filter-select.is-open .filter-chevron{transform:rotate(180deg)}
 .filter-options{position:absolute;top:calc(100% + .42rem);left:0;z-index:20;width:max-content;min-width:100%;max-width:min(300px,calc(100vw - 2rem));max-height:min(340px,55svh);overflow:auto;padding:.35rem;border:1px solid var(--console-line);border-radius:15px;background:color-mix(in srgb,var(--panel) 97%,transparent);box-shadow:0 18px 46px -24px rgba(0,0,0,.44),0 5px 18px -12px color-mix(in srgb,var(--text) 25%,transparent);transform-origin:top left;animation:alertMenuIn .2s var(--ease) both;backdrop-filter:blur(16px)}
 .filter-options-portal{position:fixed;z-index:100;width:max-content;max-width:min(300px,calc(100vw - 1rem));}
-.role-owner-display{display:inline-flex;width:98px;min-height:42px;justify-content:center;cursor:default;pointer-events:none}
+.filter-trigger.role-owner-display{box-sizing:border-box;display:inline-flex;width:94px;min-height:42px;padding:.45rem .7rem;justify-content:center;align-items:center;gap:0;text-align:center;font-size:.8rem;line-height:1.2;cursor:default;pointer-events:none}
 .console-theme-button{flex:none;width:34px;height:34px;padding:0;display:grid;place-items:center;border-radius:999px}
 .profile-edit-button{flex:none}
 .profile-editor{display:grid;gap:.85rem;margin:0;padding:.1rem;border:0;background:transparent;animation:none}
@@ -1072,6 +1072,8 @@ pre.code{background:var(--code);border:1px solid var(--border);border-radius:14p
 .owner-delete-verify h3,.owner-delete-verify p{margin:0}
 .delete-google-verify{display:grid;gap:.45rem}
 .delete-google-verify>span:first-child{font-size:.75rem}
+.source-delete-confirm>p{margin:0;font-size:.82rem;line-height:1.55}
+.source-delete-actions{justify-content:flex-end}
 .delete-google-done{display:inline-flex;align-items:center;gap:.35rem;color:var(--ok);font-size:.78rem;font-weight:650}
 .filter-option{display:flex;align-items:center;justify-content:space-between;gap:1rem;width:100%;padding:.58rem .68rem;border:0;border-radius:10px;background:transparent;color:var(--muted);text-align:left;text-transform:capitalize;font:500 .79rem var(--font);cursor:pointer;transition:background .18s,color .18s,transform .22s var(--ease)}
 .filter-option:hover,.filter-option:focus-visible{outline:none;background:color-mix(in srgb,var(--accent) 10%,var(--panel));color:var(--text);transform:translateX(2px)}

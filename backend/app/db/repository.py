@@ -185,7 +185,7 @@ class Repository:
         values = (wid,) if wid is not None else ()
         with self.db.connect() as c:
             return [dict(r) for r in c.execute(
-                f"SELECT users.id,username,full_name,role,is_active,users.created_at,last_login,users.workspace_id, "
+                f"SELECT users.id,username,full_name,avatar_data,role,is_active,users.created_at,last_login,users.workspace_id, "
                 f"COALESCE(users.id=workspaces.owner_user_id,0) AS is_workspace_owner "
                 f"FROM users LEFT JOIN workspaces ON workspaces.id=users.workspace_id{clause} ORDER BY users.id", values)]
 
