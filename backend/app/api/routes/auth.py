@@ -17,7 +17,8 @@ DISABLED_MSG = "This account has been disabled by an administrator. Please conta
 
 
 def _public(u: dict) -> dict:
-    return dict(id=u["id"], username=u["username"], full_name=u.get("full_name"), role=u["role"])
+    return dict(id=u["id"], username=u["username"], full_name=u.get("full_name"), role=u["role"],
+                workspace_id=u.get("workspace_id"), workspace_name=u.get("workspace_name"))
 
 
 def _issue(ctx, user: dict) -> dict:
@@ -63,13 +64,13 @@ def login(body: LoginRequest, request: Request, ctx=Depends(get_ctx)):
         raise HTTPException(401, "Invalid username or password")
     ctx.throttle.success(key)
     ctx.repo.touch_login(user["id"])
-    ctx.repo.audit(user["username"], "auth.login", None, None, ip)
+    ctx.repo.audit(user["username"], "auth.login", None, None, ip, user["workspace_id"])
     return _issue(ctx, user)
 
 
 @router.post("/register", status_code=201)
 def register(body: RegisterRequest, request: Request, ctx=Depends(get_ctx)):
-    """Self-service sign-up. Always creates a **Viewer** (read-only); an Admin can grant more access later."""
+    """Self-service sign-up creates an isolated workspace and makes its creator that workspace's Admin."""
     if not registration_enabled(ctx):
         raise HTTPException(403, "Self-registration is turned off. Please ask an Admin to create your account.")
     ip = client_ip(request)
@@ -80,10 +81,10 @@ def register(body: RegisterRequest, request: Request, ctx=Depends(get_ctx)):
     ctx.reg_throttle.failure(key)  # every attempt counts toward the hourly cap
     _policy_or_422(body.password, body.username)
     try:
-        uid = ctx.repo.create_user(body.username, hash_password(body.password), "viewer", body.full_name)
+        uid, workspace_id = ctx.repo.register_user(body.username, hash_password(body.password), body.full_name)
     except sqlite3.IntegrityError:
         raise HTTPException(409, "That username is already taken")
-    ctx.repo.audit(body.username, "auth.register", None, "role=viewer", ip)
+    ctx.repo.audit(body.username, "auth.register", None, "role=admin; new private workspace", ip, workspace_id)
     user = ctx.repo.get_user(uid)
     ctx.repo.touch_login(uid)
     return _issue(ctx, user)
@@ -116,7 +117,7 @@ def list_users(user=Depends(require("admin")), ctx=Depends(get_ctx)):
 def create_user(body: UserCreate, request: Request, user=Depends(require("admin")), ctx=Depends(get_ctx)):
     _policy_or_422(body.password, body.username)
     try:
-        uid = ctx.repo.create_user(body.username, hash_password(body.password), body.role, body.full_name)
+        uid = ctx.repo.create_user(body.username, hash_password(body.password), body.role, body.full_name, user["workspace_id"])
     except sqlite3.IntegrityError:
         raise HTTPException(409, "That username is already taken")
     ctx.repo.audit(user["username"], "user.create", body.username, f"role={body.role}", client_ip(request))

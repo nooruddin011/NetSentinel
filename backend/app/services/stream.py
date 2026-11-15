@@ -6,7 +6,7 @@ import asyncio
 
 class Hub:
     def __init__(self):
-        self._clients: set = set()
+        self._clients: dict = {}
         self._loop = None
 
     def bind(self, loop):
@@ -16,13 +16,16 @@ class Hub:
     def client_count(self) -> int:
         return len(self._clients)
 
-    def register(self) -> asyncio.Queue:
+    def client_count_for(self, workspace_id) -> int:
+        return sum(1 for wid in self._clients.values() if wid == workspace_id)
+
+    def register(self, workspace_id=1) -> asyncio.Queue:
         q: asyncio.Queue = asyncio.Queue(maxsize=200)
-        self._clients.add(q)
+        self._clients[q] = workspace_id
         return q
 
     def unregister(self, q):
-        self._clients.discard(q)
+        self._clients.pop(q, None)
 
     def publish(self, message: dict):
         """Safe to call from any thread."""
@@ -31,10 +34,13 @@ class Hub:
         self._loop.call_soon_threadsafe(self._fanout, message)
 
     def _fanout(self, message):
-        for q in list(self._clients):
+        workspace_id = message.get("workspace_id")
+        for q, wid in list(self._clients.items()):
+            if (workspace_id if workspace_id is not None else 1) != wid:
+                continue
             if q.full():  # slow consumer: drop the oldest message rather than block detection
                 try:
                     q.get_nowait()
                 except asyncio.QueueEmpty:
                     pass
-            q.put_nowait(message)
+            q.put_nowait({k: v for k, v in message.items() if k != "workspace_id"})

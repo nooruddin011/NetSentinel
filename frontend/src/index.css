@@ -119,6 +119,7 @@ select option{background:var(--panel);color:var(--text)}
 [data-theme='light'] .avatar{background:var(--text);color:var(--bg)}
 .avatar.lg{width:72px;height:72px;font-size:1.45rem}
 .user-card .who{min-width:0;line-height:1.3}.user-card .who b{display:block;font-size:.86rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.user-card .workspace-label{display:block;max-width:132px;color:var(--muted);font-size:.68rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .foot-actions{display:flex;justify-content:space-between;align-items:center;gap:.5rem;padding:0 .15rem}
 .main{flex:1;min-width:0;padding:2.1rem clamp(1.2rem,3vw,3rem) 4rem;max-width:1680px}
 .page{animation:pageIn .55s var(--ease) both}

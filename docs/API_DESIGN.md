@@ -6,6 +6,8 @@ Base URL `http://localhost:8000` (dev; the Vite proxy forwards `/api` and `/ws`)
 
 **Roles** — Viewer < Analyst < Admin; each endpoint lists the *minimum* role.
 
+Authenticated requests are scoped to the caller's workspace. Self-registration creates a private workspace; Admin-created users join their Admin's workspace. Sources, events, alerts, uploads, reports, and live WebSocket feeds are isolated by workspace.
+
 | Method | Path | Min. role | Purpose |
 |---|---|---|---|
 | GET | `/api/admin/audit` | Admin | Audit trail (sign-ins, failures, registrations, status changes, mitigations, uploads, deletions, retraining) |
@@ -22,7 +24,7 @@ Base URL `http://localhost:8000` (dev; the Vite proxy forwards `/api` and `/ws`)
 | GET | `/api/auth/config` | Public | Login-page settings: app name and whether self-registration is on |
 | POST | `/api/auth/login` | Public | Credentials → JWT. 401 wrong credentials; **403 account disabled** (only revealed with the correct password); 429 throttled |
 | GET | `/api/auth/me` | Any signed-in user | Current user incl. last sign-in |
-| POST | `/api/auth/register` | Public | Self-registration → always a Viewer, returns a JWT (rate-limited per IP; 403 when switched off; 409 username taken) |
+| POST | `/api/auth/register` | Public | Self-registration → creates a private workspace and its Admin, returns a JWT (rate-limited per IP; 403 when switched off; 409 username taken) |
 | GET | `/api/auth/users` | Admin | List users |
 | POST | `/api/auth/users` | Admin | Create user with any role |
 | DELETE | `/api/auth/users/{user_id}` | Admin | Delete a user (not yourself, not the last Admin) |

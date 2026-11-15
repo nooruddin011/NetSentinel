@@ -5,7 +5,7 @@ import logging
 
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 
-from app.api.deps import authenticate_token
+from app.api.deps import authenticate_token, workspace_context
 from app.security.rbac import has_role
 
 log = logging.getLogger(__name__)
@@ -30,7 +30,8 @@ async def stream(ws: WebSocket):
     except Exception:
         await ws.close(code=1008)
         return
-    q = ctx.hub.register()
+    ctx = workspace_context(ctx, user["workspace_id"])
+    q = ctx.hub.register(user["workspace_id"])
     await ws.send_json(dict(type="hello", user=user["username"], simulation=ctx.sim))
     try:
         token = str(first["token"])

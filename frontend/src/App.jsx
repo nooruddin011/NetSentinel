@@ -190,7 +190,7 @@ function Console({ user, onLogout, onSession }) {
           <div className="account-controls">
             <button className="user-card" onClick={() => { setView('account'); setMobileNavOpen(false) }} title="Open your account" aria-label="Open your account">
               <Avatar user={user} />
-              <span className="who"><b>{user.full_name || user.username}</b><RoleBadge role={user.role} /></span>
+              <span className="who"><b>{user.full_name || user.username}</b><small className="workspace-label">{user.workspace_name}</small><RoleBadge role={user.role} /></span>
             </button>
             <div className="foot-actions">
               <button className="icon-btn" onClick={toggle} aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`} title="Toggle theme">{theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}</button>

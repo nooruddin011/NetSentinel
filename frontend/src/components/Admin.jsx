@@ -102,12 +102,12 @@ function Settings() {
   if (!sys || !sim) return <><ErrorNote error={error} /><Spinner /></>
   return (
     <div className="grid g2">
-      <Card title="Sign-ups">
+      {user.workspace_id === 1 && <Card title="Sign-ups">
         <label className="row" style={{ justifyContent: 'space-between', flexWrap: 'nowrap', gap: '1rem' }}>
-          <span><b>Allow self-registration</b><div className="muted" style={{ fontSize: '.8rem' }}>Visitors can create their own account on the login page. New accounts are always <b>Viewer</b> (read-only); upgrade them under Users. Limited to 10 sign-ups per IP per hour.</div></span>
+          <span><b>Allow self-registration</b><div className="muted" style={{ fontSize: '.8rem' }}>Each new account gets a private workspace and Admin access to it. Limited to 10 sign-ups per IP per hour.</div></span>
           <span className="switch"><input type="checkbox" checked={sys.registration_enabled} onChange={(e) => toggleReg(e.target.checked)} aria-label="Allow self-registration" /><span /></span>
         </label>
-      </Card>
+      </Card>}
       <Card title="Demo traffic simulator">
         <div className="grid">
           <div>

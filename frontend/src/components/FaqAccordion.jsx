@@ -27,7 +27,7 @@ const FAQ_ITEMS = [
   },
   {
     question: 'Who can create an account?',
-    answer: 'If self-registration is enabled, new accounts start with read-only Viewer access. An Admin can change a user’s role or turn registration off. If registration is disabled, an Admin must create your account.',
+    answer: 'If self-registration is enabled, each new account gets a private workspace and Admin access to manage it. An Admin can also create accounts for teammates in their workspace. If registration is disabled, ask an Admin for an account.',
   },
 ]
 

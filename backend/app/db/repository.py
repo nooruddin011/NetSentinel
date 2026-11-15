@@ -41,28 +41,64 @@ def _loads(s, default=None):
 
 
 class Repository:
-    def __init__(self, db: Database):
-        self.db = db
+    def __init__(self, db: Database, workspace_id=None):
+        self.db, self.workspace_id = db, workspace_id
+
+    def for_workspace(self, workspace_id):
+        return Repository(self.db, workspace_id)
+
+    def _ws(self, alias=""):
+        if self.workspace_id is None:
+            return "", []
+        return f" AND {alias + '.' if alias else ''}workspace_id=?", [self.workspace_id]
+
+    def create_workspace(self, name, created_by):
+        with self.db.connect() as c:
+            return c.execute("INSERT INTO workspaces(name,created_by,created_at) VALUES(?,?,?)",
+                             (name[:100], created_by, time.time())).lastrowid
 
     # ------------------------------------------------------------------ users
-    def create_user(self, username, password_hash, role, full_name=None):
+    def create_user(self, username, password_hash, role, full_name=None, workspace_id=None):
+        wid = workspace_id if workspace_id is not None else (self.workspace_id or 1)
         with self.db.connect() as c:
-            cur = c.execute("INSERT INTO users(username,password_hash,role,created_at,full_name) VALUES(?,?,?,?,?)",
-                            (username, password_hash, role, time.time(), (full_name or None)))
+            cur = c.execute("INSERT INTO users(username,password_hash,role,created_at,full_name,workspace_id) VALUES(?,?,?,?,?,?)",
+                            (username, password_hash, role, time.time(), (full_name or None), wid))
             return cur.lastrowid
+
+    def register_user(self, username, password_hash, full_name=None):
+        with self.db.connect() as c:
+            cur = c.execute("INSERT INTO workspaces(name,created_by,created_at) VALUES(?,?,?)",
+                            (f"{username[:80]}'s workspace", username, time.time()))
+            wid = cur.lastrowid
+            user = c.execute("INSERT INTO users(username,password_hash,role,created_at,full_name,workspace_id) VALUES(?,?,?,?,?,?)",
+                             (username, password_hash, "admin", time.time(), full_name or None, wid))
+            return user.lastrowid, wid
 
     def get_user_by_name(self, username):
         with self.db.connect() as c:
-            return _row(c.execute("SELECT * FROM users WHERE username=?", (username,)).fetchone())
+            return _row(c.execute("SELECT users.*,workspaces.name AS workspace_name FROM users LEFT JOIN workspaces ON workspaces.id=users.workspace_id WHERE username=?", (username,)).fetchone())
 
     def get_user(self, user_id):
+        clause, vals = self._ws()
+        clause = clause.replace("workspace_id", "users.workspace_id")
         with self.db.connect() as c:
-            return _row(c.execute("SELECT * FROM users WHERE id=?", (user_id,)).fetchone())
+            return _row(c.execute(f"SELECT users.*,workspaces.name AS workspace_name FROM users LEFT JOIN workspaces ON workspaces.id=users.workspace_id WHERE users.id=?{clause}", (user_id, *vals)).fetchone())
 
-    def list_users(self):
+    def get_workspace(self, workspace_id):
+        with self.db.connect() as c:
+            return _row(c.execute("SELECT * FROM workspaces WHERE id=?", (workspace_id,)).fetchone())
+
+    def list_workspace_ids(self):
+        with self.db.connect() as c:
+            return [r[0] for r in c.execute("SELECT id FROM workspaces ORDER BY id")]
+
+    def list_users(self, workspace_id=None):
+        wid = workspace_id if workspace_id is not None else self.workspace_id
+        clause = " WHERE workspace_id=?" if wid is not None else ""
+        values = (wid,) if wid is not None else ()
         with self.db.connect() as c:
             return [dict(r) for r in c.execute(
-                "SELECT id,username,full_name,role,is_active,created_at,last_login FROM users ORDER BY id")]
+                f"SELECT id,username,full_name,role,is_active,created_at,last_login,workspace_id FROM users{clause} ORDER BY id", values)]
 
     def update_user(self, user_id, role=None, is_active=None, password_hash=None, full_name=None):
         sets, vals = [], []
@@ -76,35 +112,43 @@ class Repository:
             sets.append("password_hash=?"); vals.append(password_hash)
         if not sets:
             return
+        clause, wsvals = self._ws()
         with self.db.connect() as c:
-            c.execute(f"UPDATE users SET {', '.join(sets)} WHERE id=?", (*vals, user_id))  # fixed column names
+            c.execute(f"UPDATE users SET {', '.join(sets)} WHERE id=?{clause}", (*vals, user_id, *wsvals))  # fixed column names
 
     def delete_user(self, user_id) -> bool:
+        clause, wsvals = self._ws()
         with self.db.connect() as c:
-            return c.execute("DELETE FROM users WHERE id=?", (user_id,)).rowcount > 0
+            return c.execute(f"DELETE FROM users WHERE id=?{clause}", (user_id, *wsvals)).rowcount > 0
 
     def touch_login(self, user_id):
         with self.db.connect() as c:
             c.execute("UPDATE users SET last_login=? WHERE id=?", (time.time(), user_id))
 
-    def count_admins(self):
+    def count_admins(self, workspace_id=None):
+        wid = workspace_id if workspace_id is not None else self.workspace_id
+        clause = " AND workspace_id=?" if wid is not None else ""
+        values = (wid,) if wid is not None else ()
         with self.db.connect() as c:
-            return c.execute("SELECT COUNT(*) FROM users WHERE role='admin' AND is_active=1").fetchone()[0]
+            return c.execute(f"SELECT COUNT(*) FROM users WHERE role='admin' AND is_active=1{clause}", values).fetchone()[0]
 
     def count_users(self):
+        clause, vals = self._ws()
         with self.db.connect() as c:
-            return c.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+            return c.execute(f"SELECT COUNT(*) FROM users WHERE 1=1{clause}", vals).fetchone()[0]
 
     # ------------------------------------------------------------------ audit
-    def audit(self, username, action, target=None, detail=None, ip=None):
+    def audit(self, username, action, target=None, detail=None, ip=None, workspace_id=None):
+        wid = workspace_id if workspace_id is not None else (self.workspace_id or 1)
         with self.db.connect() as c:
-            c.execute("INSERT INTO audit_log(ts,username,action,target,detail,ip) VALUES(?,?,?,?,?,?)",
-                      (time.time(), username, action, target, (detail or "")[:500], ip))
+            c.execute("INSERT INTO audit_log(workspace_id,ts,username,action,target,detail,ip) VALUES(?,?,?,?,?,?,?)",
+                      (wid, time.time(), username, action, target, (detail or "")[:500], ip))
 
     def list_audit(self, limit=100, offset=0):
+        clause, vals = self._ws()
         with self.db.connect() as c:
             return [dict(r) for r in c.execute(
-                "SELECT * FROM audit_log ORDER BY id DESC LIMIT ? OFFSET ?", (limit, offset))]
+                f"SELECT * FROM audit_log WHERE 1=1{clause} ORDER BY id DESC LIMIT ? OFFSET ?", (*vals, limit, offset))]
 
     # ------------------------------------------------------------------ events & alerts
     def record_detection(self, ev: dict, det: dict, origin="stream", job_id=None, dedupe_window=300,
@@ -135,15 +179,16 @@ class Repository:
 
     def _record(self, c, ev, det, origin, job_id, dedupe_window, include_explanation):
         is_threat = det["verdict"] == "threat"
+        wid = self.workspace_id or ev.get("workspace_id") or 1
         blocked = 0
         if is_threat and ev.get("src_ip"):
-            blocked = 1 if c.execute("SELECT 1 FROM blocklist WHERE ip=?", (ev["src_ip"],)).fetchone() else 0
+            blocked = 1 if c.execute("SELECT 1 FROM blocklist WHERE workspace_id=? AND ip=?", (wid, ev["src_ip"])).fetchone() else 0
         feats = ev.get("features", {})
         cur = c.execute(
-            "INSERT INTO events(ts,src_ip,dst_ip,dst_port,protocol,bytes_total,features_json,payload_sample,verdict,"
+            "INSERT INTO events(workspace_id,ts,src_ip,dst_ip,dst_port,protocol,bytes_total,features_json,payload_sample,verdict,"
             "attack_type,confidence,risk_score,severity,sources_json,origin,job_id,blocked,source_id,eid) "
-            "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-            (ev["ts"], ev.get("src_ip"), ev.get("dst_ip"), int(feats.get("dst_port", 0)), ev.get("protocol"),
+            "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (wid, ev["ts"], ev.get("src_ip"), ev.get("dst_ip"), int(feats.get("dst_port", 0)), ev.get("protocol"),
              float(feats.get("src_bytes", 0)) + float(feats.get("dst_bytes", 0)), json.dumps(feats),
              (ev.get("payload_sample") or "")[:500], det["verdict"], det.get("attack_type"), det.get("confidence"),
              det.get("risk_score"), det.get("severity"), json.dumps(det.get("sources", [])), origin, job_id, blocked,
@@ -151,16 +196,16 @@ class Repository:
         event_id = cur.lastrowid
         alert_id, is_new = None, False
         if is_threat:
-            alert_id, is_new = self._upsert_alert(c, event_id, ev, det, origin, job_id, dedupe_window, include_explanation)
+            alert_id, is_new = self._upsert_alert(c, event_id, ev, det, origin, job_id, dedupe_window, include_explanation, wid)
             c.execute("UPDATE events SET alert_id=? WHERE id=?", (alert_id, event_id))
         return dict(event_id=event_id, alert_id=alert_id, alert_is_new=is_new, blocked=bool(blocked))
 
-    def _upsert_alert(self, c, event_id, ev, det, origin, job_id, window, include_explanation):
+    def _upsert_alert(self, c, event_id, ev, det, origin, job_id, window, include_explanation, workspace_id):
         ts = ev["ts"]
         row = c.execute(
-            "SELECT id,count,risk_score,severity FROM alerts WHERE src_ip IS ? AND attack_type=? "
+            "SELECT id,count,risk_score,severity FROM alerts WHERE workspace_id=? AND src_ip IS ? AND attack_type=? "
             "AND status IN ('open','acknowledged') AND last_seen>=? AND last_seen<=? ORDER BY last_seen DESC LIMIT 1",
-            (ev.get("src_ip"), det["attack_type"], ts - window, ts + window)).fetchone()
+            (workspace_id, ev.get("src_ip"), det["attack_type"], ts - window, ts + window)).fetchone()
         if row:
             sev = det["severity"] if _SEV_RANK.get(det["severity"], 0) > _SEV_RANK.get(row["severity"], 0) else row["severity"]
             c.execute("UPDATE alerts SET count=count+1,last_seen=MAX(last_seen,?),risk_score=MAX(risk_score,?),severity=?,updated_at=? WHERE id=?",
@@ -168,16 +213,17 @@ class Repository:
             return row["id"], False
         expl = json.dumps(det.get("explanation")) if include_explanation and det.get("explanation") else None
         cur = c.execute(
-            "INSERT INTO alerts(event_id,first_seen,last_seen,count,attack_type,severity,risk_score,confidence,src_ip,dst_ip,"
-            "explanation_json,sources_json,origin,job_id,updated_at,source_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-            (event_id, ts, ts, 1, det["attack_type"], det["severity"], det["risk_score"], det["confidence"],
+            "INSERT INTO alerts(workspace_id,event_id,first_seen,last_seen,count,attack_type,severity,risk_score,confidence,src_ip,dst_ip,"
+            "explanation_json,sources_json,origin,job_id,updated_at,source_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (workspace_id, event_id, ts, ts, 1, det["attack_type"], det["severity"], det["risk_score"], det["confidence"],
              ev.get("src_ip"), ev.get("dst_ip"), expl, json.dumps(det.get("sources", [])), origin, job_id, time.time(),
              ev.get("source_id")))
         return cur.lastrowid, True
 
     def get_alert(self, alert_id):
+        clause, vals = self._ws()
         with self.db.connect() as c:
-            a = _row(c.execute("SELECT * FROM alerts WHERE id=?", (alert_id,)).fetchone())
+            a = _row(c.execute(f"SELECT * FROM alerts WHERE id=?{clause}", (alert_id, *vals)).fetchone())
             if not a:
                 return None
             a["explanation"] = _loads(a.pop("explanation_json"), None)
@@ -195,12 +241,15 @@ class Repository:
             return a
 
     def set_alert_explanation(self, alert_id, explanation):
+        clause, vals = self._ws()
         with self.db.connect() as c:
-            c.execute("UPDATE alerts SET explanation_json=? WHERE id=?", (json.dumps(explanation), alert_id))
+            c.execute(f"UPDATE alerts SET explanation_json=? WHERE id=?{clause}", (json.dumps(explanation), alert_id, *vals))
 
     def list_alerts(self, status=None, severity=None, attack_type=None, q=None, since=None, sort="time",
                     limit=50, offset=0, scope="all"):
         where, vals = [], []
+        if self.workspace_id is not None:
+            where.append("workspace_id=?"); vals.append(self.workspace_id)
         if scope in SCOPES:
             where.append(SCOPES[scope])
         if status:
@@ -227,15 +276,17 @@ class Repository:
     def update_alert_status(self, alert_id, status, username):
         if status not in ALERT_STATUSES:
             raise ValueError("invalid status")
+        clause, vals = self._ws()
         with self.db.connect() as c:
-            cur = c.execute("UPDATE alerts SET status=?,handled_by=?,updated_at=? WHERE id=?",
-                            (status, username, time.time(), alert_id))
+            cur = c.execute(f"UPDATE alerts SET status=?,handled_by=?,updated_at=? WHERE id=?{clause}",
+                            (status, username, time.time(), alert_id, *vals))
             return cur.rowcount > 0
 
     def recent_alert_count(self, src_ip, since):
+        clause, vals = self._ws()
         with self.db.connect() as c:
-            return c.execute("SELECT COALESCE(SUM(count),0) FROM alerts WHERE src_ip=? AND last_seen>=?",
-                             (src_ip, since)).fetchone()[0]
+            return c.execute(f"SELECT COALESCE(SUM(count),0) FROM alerts WHERE src_ip=? AND last_seen>=?{clause}",
+                             (src_ip, since, *vals)).fetchone()[0]
 
     def recent_events(self, limit=50, threats_only=False, scope="all"):
         sql = ("SELECT id,ts,src_ip,dst_ip,protocol,bytes_total,verdict,attack_type,severity,risk_score,confidence,blocked,alert_id,origin,"
@@ -243,8 +294,10 @@ class Repository:
         if threats_only:
             sql += " AND verdict='threat'"
         sql += scope_sql(scope)
+        clause, vals = self._ws()
+        sql += clause
         with self.db.connect() as c:
-            return [dict(r) for r in c.execute(sql + " ORDER BY id DESC LIMIT ?", (limit,))]
+            return [dict(r) for r in c.execute(sql + " ORDER BY id DESC LIMIT ?", (*vals, limit))]
 
     def iter_alerts_for_export(self, since=None, limit=50000, scope="all"):
         with self.db.connect() as c:
@@ -254,26 +307,32 @@ class Repository:
             if since:
                 sql += " AND last_seen>=?"; vals.append(since)
             sql += scope_sql(scope)
+            clause, wsvals = self._ws()
+            sql += clause
+            vals.extend(wsvals)
             return [dict(r) for r in c.execute(sql + " ORDER BY last_seen DESC LIMIT ?", (*vals, limit))]
 
     # ------------------------------------------------------------------ analytics
     def overview(self, hours=24, scope="all"):
         since = time.time() - hours * 3600
         sc, sa = scope_sql(scope), scope_sql(scope, "a.origin")
+        ew, wv = self._ws()
+        aw, awv = self._ws("a")
+        sc += ew; sa += aw
         with self.db.connect() as c:
             tot = c.execute("SELECT COUNT(*), COALESCE(SUM(verdict='threat'),0), COALESCE(SUM(bytes_total),0), "
                             "COUNT(DISTINCT CASE WHEN verdict='threat' THEN src_ip END), COALESCE(SUM(blocked),0) "
-                            f"FROM events WHERE ts>=?{sc}", (since,)).fetchone()
+                            f"FROM events WHERE ts>=?{sc}", (since, *wv)).fetchone()
             by_sev = {r[0]: r[1] for r in c.execute(
-                f"SELECT severity,COUNT(*) FROM events WHERE verdict='threat' AND ts>=?{sc} GROUP BY severity", (since,))}
+                f"SELECT severity,COUNT(*) FROM events WHERE verdict='threat' AND ts>=?{sc} GROUP BY severity", (since, *wv))}
             by_type = [dict(name=r[0], value=r[1]) for r in c.execute(
-                f"SELECT attack_type,COUNT(*) FROM events WHERE verdict='threat' AND ts>=?{sc} GROUP BY attack_type ORDER BY 2 DESC", (since,))]
+                f"SELECT attack_type,COUNT(*) FROM events WHERE verdict='threat' AND ts>=?{sc} GROUP BY attack_type ORDER BY 2 DESC", (since, *wv))]
             by_proto = [dict(name=r[0] or "OTHER", value=r[1]) for r in c.execute(
-                f"SELECT protocol,COUNT(*) FROM events WHERE ts>=?{sc} GROUP BY protocol ORDER BY 2 DESC", (since,))]
-            open_alerts = c.execute(f"SELECT COUNT(*) FROM alerts WHERE status IN ('open','acknowledged'){sc}").fetchone()[0]
-            crit_open = c.execute(f"SELECT COUNT(*) FROM alerts WHERE status='open' AND severity='Critical'{sc}").fetchone()[0]
-            mitig = c.execute(f"SELECT COUNT(*) FROM mitigations m JOIN alerts a ON a.id=m.alert_id WHERE m.applied_at>=?{sa}", (since,)).fetchone()[0]
-            avg_risk = c.execute(f"SELECT AVG(risk_score) FROM events WHERE verdict='threat' AND ts>=?{sc}", (since,)).fetchone()[0]
+                f"SELECT protocol,COUNT(*) FROM events WHERE ts>=?{sc} GROUP BY protocol ORDER BY 2 DESC", (since, *wv))]
+            open_alerts = c.execute(f"SELECT COUNT(*) FROM alerts WHERE status IN ('open','acknowledged'){sc}", wv).fetchone()[0]
+            crit_open = c.execute(f"SELECT COUNT(*) FROM alerts WHERE status='open' AND severity='Critical'{sc}", wv).fetchone()[0]
+            mitig = c.execute(f"SELECT COUNT(*) FROM mitigations m JOIN alerts a ON a.id=m.alert_id WHERE m.applied_at>=?{sa}", (since, *awv)).fetchone()[0]
+            avg_risk = c.execute(f"SELECT AVG(risk_score) FROM events WHERE verdict='threat' AND ts>=?{sc}", (since, *wv)).fetchone()[0]
         return dict(window_hours=hours, scope=scope, total_events=tot[0], threats=int(tot[1]), bytes_total=float(tot[2]),
                     unique_attackers=tot[3], blocked_events=int(tot[4]), open_alerts=open_alerts,
                     critical_open=crit_open, mitigations_applied=mitig, avg_risk=round(avg_risk or 0, 1),
@@ -284,10 +343,11 @@ class Repository:
         now = time.time()
         end = int(now // 3600)
         start = end - hours + 1
+        sc = scope_sql(scope); clause, vals = self._ws(); sc += clause
         with self.db.connect() as c:
             rows = {r[0]: (r[1], r[2]) for r in c.execute(
                 f"SELECT CAST(ts/3600 AS INTEGER) b, COUNT(*), COALESCE(SUM(verdict='threat'),0) FROM events "
-                f"WHERE ts>=?{scope_sql(scope)} GROUP BY b", (start * 3600,))}
+                f"WHERE ts>=?{sc} GROUP BY b", (start * 3600, *vals))}
         out = []
         for b in range(start, end + 1):
             t, th = rows.get(b, (0, 0))
@@ -297,83 +357,95 @@ class Repository:
 
     def heatmap(self, hours=24 * 7, scope="all"):
         since = time.time() - hours * 3600
+        sc = scope_sql(scope); clause, vals = self._ws(); sc += clause
         with self.db.connect() as c:
             return [dict(attack_type=r[0], hour=r[1], count=r[2]) for r in c.execute(
                 f"SELECT attack_type, CAST(strftime('%H', ts, 'unixepoch') AS INTEGER) h, COUNT(*) FROM events "
-                f"WHERE verdict='threat' AND ts>=?{scope_sql(scope)} GROUP BY attack_type, h", (since,))]
+                f"WHERE verdict='threat' AND ts>=?{sc} GROUP BY attack_type, h", (since, *vals))]
 
     def top_sources(self, hours=24, limit=10, scope="all"):
         since = time.time() - hours * 3600
-        sc = scope_sql(scope)
+        sc = scope_sql(scope); clause, vals = self._ws(); sc += clause
         with self.db.connect() as c:
             rows = [dict(r) for r in c.execute(
                 f"SELECT src_ip, COUNT(*) AS events, ROUND(MAX(risk_score),1) AS max_risk FROM events "
-                f"WHERE verdict='threat' AND ts>=?{sc} GROUP BY src_ip ORDER BY events DESC LIMIT ?", (since, limit))]
+                f"WHERE verdict='threat' AND ts>=?{sc} GROUP BY src_ip ORDER BY events DESC LIMIT ?", (since, *vals, limit))]
             for r in rows:
                 t = c.execute(f"SELECT attack_type FROM events WHERE src_ip=? AND verdict='threat' AND ts>=?{sc} "
-                              "GROUP BY attack_type ORDER BY COUNT(*) DESC LIMIT 1", (r["src_ip"], since)).fetchone()
+                              "GROUP BY attack_type ORDER BY COUNT(*) DESC LIMIT 1", (r["src_ip"], since, *vals)).fetchone()
                 r["top_attack"] = t[0] if t else None
-                r["blocked"] = bool(c.execute("SELECT 1 FROM blocklist WHERE ip=?", (r["src_ip"],)).fetchone())
+                r["blocked"] = bool(c.execute("SELECT 1 FROM blocklist WHERE workspace_id=? AND ip=?", (self.workspace_id or 1, r["src_ip"])).fetchone())
             return rows
 
     # ------------------------------------------------------------------ mitigations & blocklist
     def add_mitigation(self, alert_id, solution_id, title, rule_text, username, details=None):
         with self.db.connect() as c:
-            cur = c.execute("INSERT INTO mitigations(alert_id,solution_id,title,rule_text,applied_by,applied_at,details_json) "
-                            "VALUES(?,?,?,?,?,?,?)",
-                            (alert_id, solution_id, title, rule_text, username, time.time(), json.dumps(details or {})))
+            wid = self.workspace_id or 1
+            cur = c.execute("INSERT INTO mitigations(workspace_id,alert_id,solution_id,title,rule_text,applied_by,applied_at,details_json) "
+                            "VALUES(?,?,?,?,?,?,?,?)",
+                            (wid, alert_id, solution_id, title, rule_text, username, time.time(), json.dumps(details or {})))
             return cur.lastrowid
 
     def list_mitigations(self, limit=100):
+        clause, vals = self._ws("m")
         with self.db.connect() as c:
             return [dict(r) for r in c.execute(
-                "SELECT m.id,m.alert_id,m.solution_id,m.title,m.status,m.applied_by,m.applied_at,a.attack_type,a.src_ip "
-                "FROM mitigations m JOIN alerts a ON a.id=m.alert_id ORDER BY m.id DESC LIMIT ?", (limit,))]
+                f"SELECT m.id,m.alert_id,m.solution_id,m.title,m.status,m.applied_by,m.applied_at,a.attack_type,a.src_ip "
+                f"FROM mitigations m JOIN alerts a ON a.id=m.alert_id WHERE 1=1{clause} ORDER BY m.id DESC LIMIT ?", (*vals, limit))]
 
     def block_ip(self, ip, reason, alert_id, username):
         with self.db.connect() as c:
-            c.execute("INSERT OR REPLACE INTO blocklist(ip,reason,alert_id,created_by,created_at) VALUES(?,?,?,?,?)",
-                      (ip, reason[:200], alert_id, username, time.time()))
+            c.execute("INSERT OR REPLACE INTO blocklist(workspace_id,ip,reason,alert_id,created_by,created_at) VALUES(?,?,?,?,?,?)",
+                      (self.workspace_id or 1, ip, reason[:200], alert_id, username, time.time()))
 
     def unblock_ip(self, ip):
+        clause, vals = self._ws()
         with self.db.connect() as c:
-            return c.execute("DELETE FROM blocklist WHERE ip=?", (ip,)).rowcount > 0
+            return c.execute(f"DELETE FROM blocklist WHERE ip=?{clause}", (ip, *vals)).rowcount > 0
 
     def list_blocklist(self):
+        clause, vals = self._ws()
         with self.db.connect() as c:
-            return [dict(r) for r in c.execute("SELECT * FROM blocklist ORDER BY created_at DESC")]
+            return [dict(r) for r in c.execute(f"SELECT * FROM blocklist WHERE 1=1{clause} ORDER BY created_at DESC", vals)]
 
     # ------------------------------------------------------------------ upload jobs
     def create_job(self, filename, username):
         with self.db.connect() as c:
-            return c.execute("INSERT INTO upload_jobs(filename,created_by,created_at,status) VALUES(?,?,?,'running')",
-                             (filename[:200], username, time.time())).lastrowid
+            return c.execute("INSERT INTO upload_jobs(workspace_id,filename,created_by,created_at,status) VALUES(?,?,?,?,'running')",
+                             (self.workspace_id or 1, filename[:200], username, time.time())).lastrowid
 
     def finish_job(self, job_id, status, rows_total=0, rows_flagged=0, summary=None, error=None):
+        clause, vals = self._ws()
         with self.db.connect() as c:
-            c.execute("UPDATE upload_jobs SET status=?,rows_total=?,rows_flagged=?,summary_json=?,error=? WHERE id=?",
-                      (status, rows_total, rows_flagged, json.dumps(summary) if summary is not None else None, error, job_id))
+            c.execute(f"UPDATE upload_jobs SET status=?,rows_total=?,rows_flagged=?,summary_json=?,error=? WHERE id=?{clause}",
+                      (status, rows_total, rows_flagged, json.dumps(summary) if summary is not None else None, error, job_id, *vals))
 
     def get_job(self, job_id):
+        clause, vals = self._ws()
         with self.db.connect() as c:
-            j = _row(c.execute("SELECT * FROM upload_jobs WHERE id=?", (job_id,)).fetchone())
+            j = _row(c.execute(f"SELECT * FROM upload_jobs WHERE id=?{clause}", (job_id, *vals)).fetchone())
         if j:
             j["summary"] = _loads(j.pop("summary_json"), None)
         return j
 
     def list_jobs(self, limit=20, created_by=None):
-        """Upload history. `created_by=None` returns everyone's (Admin view); otherwise only that user's."""
+        """List uploads within this workspace, optionally filtered to their creator."""
         sql = "SELECT id,filename,created_by,created_at,status,rows_total,rows_flagged FROM upload_jobs"
+        sql += " WHERE 1=1"
         vals = []
+        if self.workspace_id is not None:
+            sql += " AND workspace_id=?"; vals.append(self.workspace_id)
         if created_by is not None:
-            sql += " WHERE created_by=?"; vals.append(created_by)
+            sql += " AND created_by=?" if " WHERE " in sql else " WHERE created_by=?"
+            vals.append(created_by)
         with self.db.connect() as c:
             return [dict(r) for r in c.execute(sql + " ORDER BY id DESC LIMIT ?", (*vals, limit))]
 
     def delete_job(self, job_id, delete_findings=False):
         """Remove an upload log. With delete_findings, also remove the events/alerts that upload produced."""
+        clause, vals = self._ws()
         with self.db.connect() as c:
-            if not c.execute("SELECT 1 FROM upload_jobs WHERE id=?", (job_id,)).fetchone():
+            if not c.execute(f"SELECT 1 FROM upload_jobs WHERE id=?{clause}", (job_id, *vals)).fetchone():
                 return None
             n_alerts = n_events = 0
             if delete_findings:
@@ -382,7 +454,7 @@ class Repository:
             else:
                 c.execute("UPDATE events SET job_id=NULL WHERE job_id=?", (job_id,))
                 c.execute("UPDATE alerts SET job_id=NULL WHERE job_id=?", (job_id,))
-            c.execute("DELETE FROM upload_jobs WHERE id=?", (job_id,))
+            c.execute(f"DELETE FROM upload_jobs WHERE id=?{clause}", (job_id, *vals))
             return dict(alerts_deleted=n_alerts, events_deleted=n_events)
 
     # ------------------------------------------------------------------ model runs
@@ -422,13 +494,15 @@ class Repository:
         return d
 
     def create_source(self, name, kind, key_prefix, key_hash, policy, created_by):
+        wid = self.workspace_id or 1
         with self.db.connect() as c:
-            return c.execute("INSERT INTO sources(name,kind,key_prefix,key_hash,policy_json,created_by,created_at) VALUES(?,?,?,?,?,?,?)",
-                             (name, kind, key_prefix, key_hash, json.dumps(policy), created_by, time.time())).lastrowid
+            return c.execute("INSERT INTO sources(workspace_id,name,kind,key_prefix,key_hash,policy_json,created_by,created_at) VALUES(?,?,?,?,?,?,?,?)",
+                             (wid, name, kind, key_prefix, key_hash, json.dumps(policy), created_by, time.time())).lastrowid
 
     def get_source(self, source_id):
+        clause, vals = self._ws()
         with self.db.connect() as c:
-            r = c.execute("SELECT * FROM sources WHERE id=?", (source_id,)).fetchone()
+            r = c.execute(f"SELECT * FROM sources WHERE id=?{clause}", (source_id, *vals)).fetchone()
         return self._src(r) if r else None
 
     def get_source_by_key_hash(self, key_hash):
@@ -437,8 +511,9 @@ class Repository:
         return self._src(r) if r else None
 
     def list_sources(self):
+        clause, vals = self._ws()
         with self.db.connect() as c:
-            return [self._src(r) for r in c.execute("SELECT * FROM sources ORDER BY id")]
+            return [self._src(r) for r in c.execute(f"SELECT * FROM sources WHERE 1=1{clause} ORDER BY id", vals)]
 
     def update_source(self, source_id, name=None, policy=None):
         sets, vals = [], []
@@ -447,53 +522,63 @@ class Repository:
         if policy is not None:
             sets.append("policy_json=?"); vals.append(json.dumps(policy))
         if sets:
+            clause, wsvals = self._ws()
             with self.db.connect() as c:
-                c.execute(f"UPDATE sources SET {', '.join(sets)} WHERE id=?", (*vals, source_id))  # fixed column names
+                c.execute(f"UPDATE sources SET {', '.join(sets)} WHERE id=?{clause}", (*vals, source_id, *wsvals))  # fixed column names
 
     def set_source_key(self, source_id, key_prefix, key_hash):
         """Rotate: the old key stops working immediately; also re-activates a revoked source."""
+        clause, vals = self._ws()
         with self.db.connect() as c:
-            c.execute("UPDATE sources SET key_prefix=?,key_hash=?,revoked_at=NULL WHERE id=?", (key_prefix, key_hash, source_id))
+            c.execute(f"UPDATE sources SET key_prefix=?,key_hash=?,revoked_at=NULL WHERE id=?{clause}", (key_prefix, key_hash, source_id, *vals))
 
     def revoke_source(self, source_id):
+        clause, vals = self._ws()
         with self.db.connect() as c:
-            return c.execute("UPDATE sources SET revoked_at=? WHERE id=? AND revoked_at IS NULL", (time.time(), source_id)).rowcount > 0
+            return c.execute(f"UPDATE sources SET revoked_at=? WHERE id=? AND revoked_at IS NULL{clause}", (time.time(), source_id, *vals)).rowcount > 0
 
     def delete_source(self, source_id):
         """Remove the source and its key. Already-recorded events/alerts are kept (shown as a deleted source)."""
+        clause, vals = self._ws()
         with self.db.connect() as c:
             c.execute("UPDATE events SET source_id=NULL WHERE source_id=?", (source_id,))
             c.execute("UPDATE alerts SET source_id=NULL WHERE source_id=?", (source_id,))
-            return c.execute("DELETE FROM sources WHERE id=?", (source_id,)).rowcount > 0
+            return c.execute(f"DELETE FROM sources WHERE id=?{clause}", (source_id, *vals)).rowcount > 0
 
     def touch_source(self, source_id, events=0, threats=0, rejected=0, info=None, heartbeat=False):
+        clause, vals = self._ws()
         with self.db.connect() as c:
             now = time.time()
             c.execute("UPDATE sources SET events_total=events_total+?, threats_total=threats_total+?, rejected_total=rejected_total+?, "
                       "last_seen=CASE WHEN ?>0 THEN ? ELSE last_seen END, last_heartbeat=CASE WHEN ? THEN ? ELSE last_heartbeat END, "
-                      "info_json=COALESCE(?,info_json) WHERE id=?",
-                      (events, threats, rejected, events, now, 1 if heartbeat else 0, now, json.dumps(info) if info is not None else None, source_id))
+                      f"info_json=COALESCE(?,info_json) WHERE id=?{clause}",
+                      (events, threats, rejected, events, now, 1 if heartbeat else 0, now, json.dumps(info) if info is not None else None, source_id, *vals))
 
     def known_eids(self, source_id, eids):
         """Which of these event ids were already stored for this source (idempotent ingestion)."""
         eids = [e for e in eids if e]
         found = set()
+        clause, vals = self._ws()
         with self.db.connect() as c:
             for i in range(0, len(eids), 500):
                 chunk = eids[i:i + 500]
                 q = ",".join("?" * len(chunk))
-                found |= {r[0] for r in c.execute(f"SELECT eid FROM events WHERE source_id=? AND eid IN ({q})", (source_id, *chunk))}
+                found |= {r[0] for r in c.execute(f"SELECT eid FROM events WHERE source_id=? AND eid IN ({q}){clause}", (source_id, *chunk, *vals))}
         return found
 
     # ------------------------------------------------------------------ settings & retention
     def get_setting(self, key, default=None):
+        actual = f"workspace.{self.workspace_id}.{key}" if self.workspace_id and key.startswith("sim.") else key
         with self.db.connect() as c:
-            r = c.execute("SELECT value FROM settings WHERE key=?", (key,)).fetchone()
+            r = c.execute("SELECT value FROM settings WHERE key=?", (actual,)).fetchone()
+            if not r and actual != key:
+                r = c.execute("SELECT value FROM settings WHERE key=?", (key,)).fetchone()
             return r[0] if r else default
 
     def set_setting(self, key, value):
+        actual = f"workspace.{self.workspace_id}.{key}" if self.workspace_id and key.startswith("sim.") else key
         with self.db.connect() as c:
-            c.execute("INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", (key, str(value)))
+            c.execute("INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", (actual, str(value)))
 
     def purge_older_than(self, days):
         cutoff = time.time() - days * 86400

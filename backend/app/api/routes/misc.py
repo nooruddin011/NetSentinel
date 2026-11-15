@@ -32,13 +32,15 @@ def system_info(user=Depends(require("admin")), ctx=Depends(get_ctx)):
     return dict(app_name=APP_NAME, version="2.2.0", uptime_seconds=round(time.time() - ctx.started_at),
                 model_members=b.member_names, model_trained_at=(b.report or {}).get("created_at"),
                 dataset=((b.report or {}).get("dataset") or {}).get("name"), cache=ctx.pipeline.cache_stats(),
-                stream_clients=ctx.hub.client_count, simulation=refresh_sim(ctx), web_model_trained_at=(ctx.web_pipeline.report or {}).get("created_at"), sources=len(ctx.repo.list_sources()), email_alerts=ctx.notifier.enabled,
+                stream_clients=ctx.hub.client_count_for(ctx.repo.workspace_id), simulation=refresh_sim(ctx), web_model_trained_at=(ctx.web_pipeline.report or {}).get("created_at"), sources=len(ctx.repo.list_sources()), email_alerts=ctx.notifier.enabled,
                 registration_enabled=registration_enabled(ctx), db_bytes=db_bytes, environment=ctx.settings.app_env,
                 users=ctx.repo.count_users(), retention_days=ctx.settings.retention_days)
 
 
 @router.post("/admin/registration")
 def set_registration(body: RegistrationSetting, request: Request, user=Depends(require("admin")), ctx=Depends(get_ctx)):
+    if user["workspace_id"] != 1:
+        raise HTTPException(403, "Only the platform workspace Admin can change public registration")
     ctx.repo.set_setting("registration.enabled", "true" if body.enabled else "false")
     ctx.repo.audit(user["username"], "registration.update", None, f"enabled={body.enabled}", client_ip(request))
     return dict(registration_enabled=body.enabled)
@@ -57,6 +59,8 @@ def model_runs(user=Depends(require("viewer")), ctx=Depends(get_ctx)):
 
 @router.post("/models/retrain", status_code=202)
 def retrain(body: RetrainRequest, request: Request, user=Depends(require("admin")), ctx=Depends(get_ctx)):
+    if user["workspace_id"] != 1:
+        raise HTTPException(403, "Model retraining is managed from the platform workspace")
     if not ctx.models.start_retrain(body.quick, body.samples, user["username"]):
         raise HTTPException(409, "Training already in progress")
     ctx.repo.audit(user["username"], "model.retrain.start", None, f"quick={body.quick}", client_ip(request))

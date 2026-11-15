@@ -162,7 +162,7 @@ export default function Login({ onLogin, notice }) {
                 </div>
                 <button className="icon-btn" type="button" onClick={() => setAuthOpen(false)} aria-label="Close sign-in panel"><X size={17} /></button>
               </div>
-              <p className="sub">{registering ? 'New accounts start with read-only Viewer access.' : `Sign in to your ${BRAND.name} console.`}</p>
+              <p className="sub">{registering ? 'Create a private workspace and manage it as its Admin.' : `Sign in to your ${BRAND.name} console.`}</p>
 
               {cfg.registration_enabled && (
                 <div className="auth-tabs" role="tablist" data-pos={registering ? 1 : 0}>

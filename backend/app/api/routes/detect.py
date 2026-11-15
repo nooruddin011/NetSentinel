@@ -20,7 +20,7 @@ def detect_event(body: DetectEvent, request: Request, user=Depends(require("anal
                                      payload_sample=body.payload_sample).items() if v is not None})
     raw.setdefault("src_ip", client_ip(request))
     out = ctx.processor.process(raw, origin="api")
-    ctx.hub.publish(dict(type="event", **{k: v for k, v in out.items() if k not in ("explanation", "class_probs")}))
+    ctx.hub.publish(dict(type="event", workspace_id=user["workspace_id"], **{k: v for k, v in out.items() if k not in ("explanation", "class_probs")}))
     return out
 
 

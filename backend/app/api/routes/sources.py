@@ -6,7 +6,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
 
-from app.api.deps import client_ip, get_ctx, require
+from app.api.deps import client_ip, get_ctx, require, workspace_context
 from app.config import ROOT_DIR
 from app.models.coverage import SOURCE_KINDS, compute_coverage
 from app.schemas.api import HeartbeatInfo, IngestBatch, SourceCreate, SourceUpdate
@@ -48,7 +48,8 @@ def ingest_events(body: IngestBatch, request: Request, x_argus_key: Optional[str
         raise HTTPException(413, f"Batch too large: send at most {ctx.settings.ingest_max_batch} events per request")
     if n and not ctx.ingest_limiter.allow(src["id"], n):
         raise HTTPException(429, "Rate limit exceeded for this source", headers={"Retry-After": str(ctx.ingest_limiter.retry_after(src["id"], n))})
-    return ctx.ingest.ingest_web(src, body.events)
+    tenant = workspace_context(ctx, src["workspace_id"])
+    return tenant.ingest.ingest_web(src, body.events)
 
 
 @router.post("/ingest/heartbeat")
@@ -56,7 +57,8 @@ def ingest_heartbeat(body: HeartbeatInfo, request: Request, x_argus_key: Optiona
                      authorization: Optional[str] = Header(default=None), ctx=Depends(get_ctx)):
     """The collector calls this every ~30 s: proves it is alive (even on a quiet site) and fetches the current privacy policy."""
     src = authenticate_source(ctx, request, x_argus_key, authorization)
-    ctx.repo.touch_source(src["id"], heartbeat=True, info=dict(body.model_dump(), ip=client_ip(request)))
+    tenant = workspace_context(ctx, src["workspace_id"])
+    tenant.repo.touch_source(src["id"], heartbeat=True, info=dict(body.model_dump(), ip=client_ip(request)))
     return dict(status="ok", server_time=time.time(), policy=normalize_policy(src["policy"]))
 
 

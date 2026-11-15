@@ -8,7 +8,7 @@
 - [x] Recommendation engine driven by *measured* metrics; mitigation playbooks for all 12 attacks; simulated apply with generated rules and blocklist
 - [x] Explainability (local grouped-occlusion), alert de-duplication, prediction cache
 - [x] SQLite persistence, audit log, retention
-- [x] JWT auth, self-registration (Viewer by default), 3 roles, Admin console (create / reset password / disable / delete users, settings, system status, audit), lockout, hardened inputs/outputs, per-user upload history
+- [x] JWT auth, self-registration (private workspace Admin), workspace-isolated event data, 3 roles, Admin console (create / reset password / disable / delete workspace users, settings, system status, audit), lockout, hardened inputs/outputs
 - [x] Light/dark themes, new identity (Argus), account page, toasts/confirm dialogs, training progress that survives page changes
 - [x] Upload analysis (CSV, CICIDS headers, optional labels → live accuracy), NSL-KDD adapter
 - [x] Dashboard: live charts, heatmap, forecast, alerts workflow, model comparison, chatbot, PDF/CSV reports, email alerts

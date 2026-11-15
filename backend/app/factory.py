@@ -15,6 +15,7 @@ from app.services.simmode import refresh_sim
 from app.api.context import AppContext
 from app.bootstrap import build_context
 from app.api.routes import alerts, analytics, auth, detect, misc, sources, stream
+from app.api.deps import workspace_context
 from app.branding import APP_NAME
 from app.config import Settings, get_settings
 from app.utils.logging import setup_logging
@@ -25,12 +26,18 @@ log = logging.getLogger("cyberwatch")
 async def _simulation_loop(ctx: AppContext):
     while True:
         try:
-            refresh_sim(ctx)  # Demo/Live: the simulator switches itself off while a real source is connected (Auto mode)
-            if ctx.sim["enabled"] and ctx.hub.client_count:  # only burn CPU while someone is watching
-                ev = ctx.simulator.next_event()
-                out = await asyncio.to_thread(ctx.processor.process, ev, "stream")
-                ctx.hub.publish(dict(type="event", **{k: v for k, v in out.items() if k not in ("explanation", "class_probs")}))
-            await asyncio.sleep(ctx.sim["interval"])
+            workspace_ids = ctx.repo.list_workspace_ids()
+            interval = 5.0
+            for workspace_id in workspace_ids:
+                tenant = workspace_context(ctx, workspace_id)
+                refresh_sim(tenant)
+                interval = min(interval, tenant.sim["interval"])
+                if tenant.sim["enabled"] and ctx.hub.client_count_for(workspace_id):
+                    ev = tenant.simulator.next_event()
+                    out = await asyncio.to_thread(tenant.processor.process, ev, "stream")
+                    ctx.hub.publish(dict(type="event", workspace_id=workspace_id,
+                                         **{k: v for k, v in out.items() if k not in ("explanation", "class_probs")}))
+            await asyncio.sleep(max(0.2, interval / max(len(workspace_ids), 1)))
         except asyncio.CancelledError:
             raise
         except Exception:

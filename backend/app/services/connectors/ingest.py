@@ -56,6 +56,6 @@ class IngestService:
             if self.hub is not None:
                 out = EventProcessor.public_event(rec, det, ids, "connector")
                 out["source"] = source["name"]
-                self.hub.publish(dict(type="event", **out))
+                self.hub.publish(dict(type="event", workspace_id=source["workspace_id"], **out))
             if ids["alert_is_new"] and self.notifier:
                 self.notifier.notify(dict(det, src_ip=rec["src_ip"], dst_ip=rec["dst_ip"]))

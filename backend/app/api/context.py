@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from threading import Lock
 
 
 @dataclass
@@ -25,3 +26,5 @@ class AppContext:
     ingest: object = None
     key_throttle: object = None
     ingest_limiter: object = None
+    workspace_simulators: dict = field(default_factory=dict)
+    workspace_simulators_lock: object = field(default_factory=Lock)

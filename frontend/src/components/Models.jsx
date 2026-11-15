@@ -64,7 +64,7 @@ export default function Models({ user, train, setTrain }) {
   return (
     <>
       <PageHead eyebrow="Analyse" title="Model performance" subtitle={`Trained ${rep.created_at?.slice(0, 10)} on ${rep.dataset?.rows?.toLocaleString()} rows · ${rep.config?.cv_folds}-fold stratified cross-validation · SMOTE on training folds only`}>
-        {canAct(user, 'admin') && (
+        {canAct(user, 'admin') && user.workspace_id === 1 && (
           <div className="row">
             <button className="btn ghost sm" disabled={train?.state === 'running'} onClick={() => retrain(true)}><RefreshCw size={14} /> Quick retrain</button>
             <button className="btn ghost sm" disabled={train?.state === 'running'} onClick={() => retrain(false)}>Full retrain</button>

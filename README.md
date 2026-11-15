@@ -255,17 +255,19 @@ The web-log connector covers **SQL injection, XSS, brute force (web logins), pat
 | **Alerts** | Filter and search alerts, open one to see why it was flagged, and triage or mitigate it. |
 | **Sources** | Connect and manage sources, rotate or revoke keys, and review attack coverage. |
 | **Models** | Review model metrics and per-attack performance. Admins can retrain. |
-| **Upload & Analyse** | Analyse a flow CSV (a sample is provided) and keep a private upload history. |
-| **Admin** | Manage users, settings, the simulator mode, mitigations, and the audit log. |
+| **Upload & Analyse** | Analyse a flow CSV (a sample is provided) and keep workspace-scoped upload history. |
+| **Admin** | Manage workspace users, sources, simulator mode, mitigations, and audit history. The platform Admin manages public registration and model retraining. |
 | **Account** | Profile, light or dark theme, and password change. |
 
 **Roles**
 
+Each self-registered account gets a private workspace and becomes its Admin. An Admin-created account joins that Admin's workspace with the assigned role. Dashboard data and source connections are isolated by workspace; existing lab data stays in the original Admin workspace.
+
 | Role | Can do |
 | --- | --- |
-| **Viewer** | Read dashboards, alerts, models, and the PDF summary; use the assistant. Self-registered accounts are always Viewers. |
+| **Viewer** | Read dashboards, alerts, models, and the PDF summary; use the assistant. An Admin assigns this role within a workspace. |
 | **Analyst** | Everything a Viewer can, plus change alert status, apply simulated mitigations, upload and analyse files, and export CSV. |
-| **Admin** | Everything an Analyst can, plus manage users, sources, settings, simulator mode, model retraining, and view the audit log. |
+| **Admin** | Everything an Analyst can, plus manage workspace users, sources, simulator mode, and audit history. The platform Admin also controls public registration and shared model retraining. |
 
 ---
 
@@ -278,7 +280,7 @@ Settings come from environment variables or a `.env` file in the repository root
 | `APP_ENV` | `development` (default) or `production`, which enforces the security checks below. |
 | `JWT_SECRET` | Token signing key. Required in production. If empty in development, a temporary key is used and sessions reset on restart. |
 | `ADMIN_USERNAME` / `ADMIN_PASSWORD` | First administrator. In development an empty password is generated and printed once. |
-| `ALLOW_SELF_REGISTRATION` | Lets visitors create Viewer accounts. Admins can also toggle this in the UI. |
+| `ALLOW_SELF_REGISTRATION` | Lets visitors create a private workspace, where they become its Admin. The platform Admin can also toggle registration in the UI. |
 | `CORS_ORIGINS` | Browser origins allowed to call the API. No wildcard in production. |
 | `SIMULATION_ENABLED` | Starts the simulator on a fresh install. In Auto mode it pauses when a real source connects. |
 | `DB_PATH`, `MODEL_DIR`, `WEB_MODEL_DIR` | Locations of the SQLite database and model files. |
