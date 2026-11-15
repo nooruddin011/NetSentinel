@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { KeyRound, Trash2, UserPlus } from 'lucide-react'
 import { api } from '../api'
-import { roleLabel } from '../brand'
+import { BRAND, roleLabel } from '../brand'
 import { useConfirm, useToast } from '../feedback'
 import { Avatar, Card, Empty, PageHead, ErrorNote, PasswordHelp, RoleBadge, Spinner, Tabs, bytes, fmtTime, passwordRules } from './ui'
 
@@ -136,7 +136,7 @@ function System() {
   if (!s) return <><ErrorNote error={error} /><Spinner /></>
   const up = s.uptime_seconds
   const rows = [
-    ['Version', `${s.app_name} ${s.version} (${s.environment})`], ['Connected sources', s.sources], ['Web model trained', s.web_model_trained_at || '–'], ['Uptime', `${Math.floor(up / 3600)} h ${Math.floor((up % 3600) / 60)} min`],
+    ['Version', `${BRAND.name} ${s.version} (${s.environment})`], ['Connected sources', s.sources], ['Web model trained', s.web_model_trained_at || '–'], ['Uptime', `${Math.floor(up / 3600)} h ${Math.floor((up % 3600) / 60)} min`],
     ['Detection models', s.model_members.join(', ')], ['Trained', s.model_trained_at || '–'], ['Training data', s.dataset || '–'],
     ['Prediction cache', `${s.cache.hits} hits / ${s.cache.misses} misses (${Math.round(s.cache.hit_rate * 100)}%)`], ['Dashboards connected', s.stream_clients],
     ['Users', s.users], ['Database size', bytes(s.db_bytes)], ['Data retention', `${s.retention_days} days`], ['Email alerts', s.email_alerts ? 'Configured' : 'Not configured (set SMTP_HOST and ALERT_EMAIL_TO)'],

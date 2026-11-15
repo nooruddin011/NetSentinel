@@ -43,7 +43,7 @@ function PolicyForm({ initial, onSubmit, submitLabel, busy, error }) {
         <span className="muted" style={{ fontSize: '.76rem' }}>Shown as the attack target and used to raise the risk score if it is a critical asset.</span>
       </label>
       <div className="note info" style={{ margin: 0 }}>
-        <b>You decide what Argus can see.</b> These rules are applied on <i>your</i> server by the collector, before anything is sent, and enforced again on arrival.
+        <b>You decide what NetSentinel can see.</b> These rules are applied on <i>your</i> server by the collector, before anything is sent, and enforced again on arrival.
       </div>
       <label className="field">Never send requests under these paths (one per line)
         <textarea value={exclude} onChange={(e) => setExclude(e.target.value)} rows={3} placeholder={'/health\n/admin'} />
@@ -53,7 +53,7 @@ function PolicyForm({ initial, onSubmit, submitLabel, busy, error }) {
         <span className="muted" style={{ fontSize: '.76rem' }}>Already hidden by default: {DEFAULT_REDACT.slice(0, 8).join(', ')}, … ({DEFAULT_REDACT.length} names)</span>
       </label>
       <label className="row" style={{ justifyContent: 'space-between', flexWrap: 'nowrap', gap: '1rem' }}>
-        <span><b>Replace visitor IP addresses with pseudonyms</b><div className="muted" style={{ fontSize: '.78rem' }}>Argus still groups requests per visitor, but never sees real addresses. Blocking rules then need the real address from your own logs.</div></span>
+        <span><b>Replace visitor IP addresses with pseudonyms</b><div className="muted" style={{ fontSize: '.78rem' }}>NetSentinel still groups requests per visitor, but never sees real addresses. Blocking rules then need the real address from your own logs.</div></span>
         <span className="switch"><input type="checkbox" checked={pseudo} onChange={(e) => setPseudo(e.target.checked)} aria-label="Pseudonymise IP addresses" /><span /></span>
       </label>
       <ErrorNote error={error} />
@@ -95,11 +95,11 @@ function KeyPanel({ apiKey, source, onDone, rotated }) {
         <div className="seg" style={{ marginBottom: '.5rem' }}>{[['linux', 'Linux / macOS'], ['windows', 'Windows'], ['docker', 'Docker']].map(([id, l]) => <button key={id} className={os === id ? 'on' : ''} onClick={() => setOs(id)}>{l}</button>)}</div>
         <pre className="code">{cmd}</pre>
         <div className="row"><button className="btn ghost sm" onClick={() => copy(cmd, toast, 'Command copied')}><Copy size={13} /> Copy command</button>
-          <span className="muted" style={{ fontSize: '.78rem' }}>Needs Python 3.8+ (nothing else). If Argus runs on this same computer and the collector runs in Docker, use <span className="mono">http://host.docker.internal:PORT</span> as the URL.</span></div>
+          <span className="muted" style={{ fontSize: '.78rem' }}>Needs Python 3.8+ (nothing else). If NetSentinel runs on this same computer and the collector runs in Docker, use <span className="mono">http://host.docker.internal:PORT</span> as the URL.</span></div>
       </div>
       <div className={`note ${live.status === 'connected' ? 'ok' : 'info'}`} style={{ margin: 0 }} role="status">
         {live.status === 'connected'
-          ? <><CheckCircle2 size={14} style={{ verticalAlign: '-2px' }} /> <b>Connected!</b> Argus is receiving data ({num(live.events_total)} events so far). The dashboard is now in Live mode.</>
+          ? <><CheckCircle2 size={14} style={{ verticalAlign: '-2px' }} /> <b>Connected!</b> NetSentinel is receiving data ({num(live.events_total)} events so far). The dashboard is now in Live mode.</>
           : <><Clock size={14} style={{ verticalAlign: '-2px' }} /> Waiting for the collector to connect… this updates automatically.</>}
       </div>
       <button className="btn" onClick={onDone}>{live.status === 'connected' ? 'Finish' : 'Close (it keeps listening)'}</button>
@@ -134,7 +134,7 @@ function Wizard({ onClose, onCreated }) {
             <button key={k.id} className={`kind ${k.ready ? '' : 'off'}`} disabled={!k.ready} onClick={() => setStep(1)}>
               <b>{k.label}</b>{!k.ready && <span className="badge st-resolved">Coming soon</span>}<span className="muted">{k.text}</span>
             </button>))}</div>
-          <div className="muted" style={{ fontSize: '.8rem' }}>Argus never reaches into your systems. A small collector on your side reads the log you point it at and sends only what you allow.</div>
+          <div className="muted" style={{ fontSize: '.8rem' }}>NetSentinel never reaches into your systems. A small collector on your side reads the log you point it at and sends only what you allow.</div>
         </div>)}
       {step === 1 && <PolicyForm onSubmit={create} submitLabel="Create source and get key" busy={busy} error={error} />}
       {step === 2 && created && <KeyPanel apiKey={created.api_key} source={created.source} onDone={onClose} />}
@@ -215,8 +215,8 @@ export function CoveragePanel({ cov }) {
     <div className="grid">
       <div className={`note ${cov.mode === 'live' ? 'ok' : 'info'}`} style={{ margin: 0 }}>
         {cov.mode === 'live'
-          ? <><b>Live mode.</b> {cov.sources.filter((x) => x.status === 'connected').length} real source(s) connected. Argus can see <b>{s.covered}</b> of {s.total} attack types from them; the rest need other kinds of logs.</>
-          : <><b>Demo mode.</b> No real source is connected, so everything on the dashboard is simulated. Connect a source to see what Argus can really monitor.</>}
+          ? <><b>Live mode.</b> {cov.sources.filter((x) => x.status === 'connected').length} real source(s) connected. NetSentinel can see <b>{s.covered}</b> of {s.total} attack types from them; the rest need other kinds of logs.</>
+          : <><b>Demo mode.</b> No real source is connected, so everything on the dashboard is simulated. Connect a source to see what NetSentinel can really monitor.</>}
       </div>
       <div className="cov-grid">
         {cov.items.map((i) => {
@@ -254,7 +254,7 @@ export default function Sources({ user, cov, reloadCov }) {
   useEffect(() => { load(); const id = setInterval(load, 8000); return () => clearInterval(id) }, [load])
   return (
     <>
-      <PageHead eyebrow="Monitor" title="Sources & coverage" subtitle="Connect real systems and see exactly what Argus can, and cannot, detect. You decide what is shared, and can revoke access at any time.">
+      <PageHead eyebrow="Monitor" title="Sources & coverage" subtitle="Connect real systems and see exactly what NetSentinel can, and cannot, detect. You decide what is shared, and can revoke access at any time.">
         {admin ? <button className="btn" onClick={() => setWizard(true)}><Plus size={15} /> Connect a source</button> : <span className="muted" style={{ fontSize: '.8rem' }}>Only an Admin can connect sources</span>}
       </PageHead>
       <ErrorNote error={error} />
@@ -263,7 +263,7 @@ export default function Sources({ user, cov, reloadCov }) {
         <Card><Empty>
           <Plug size={28} style={{ marginBottom: '.5rem' }} />
           <p><b>No sources connected yet.</b></p>
-          <p className="muted" style={{ maxWidth: 520, margin: '.4rem auto 1rem' }}>Argus is showing simulated demo traffic. Connect a web server's access log to monitor a real system in real time. You choose what is shared, and you can revoke access at any time.</p>
+          <p className="muted" style={{ maxWidth: 520, margin: '.4rem auto 1rem' }}>NetSentinel is showing simulated demo traffic. Connect a web server's access log to monitor a real system in real time. You choose what is shared, and you can revoke access at any time.</p>
           {admin ? <button className="btn" onClick={() => setWizard(true)}><Plus size={15} /> Connect your first source</button> : <span className="muted">Ask an Admin to connect one.</span>}
           <p className="muted" style={{ fontSize: '.78rem', marginTop: '1rem' }}>No server handy? The Docker lab in <span className="mono">lab/README.md</span> starts a vulnerable website you can attack safely on your own computer.</p>
         </Empty></Card>

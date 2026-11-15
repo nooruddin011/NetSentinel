@@ -203,7 +203,7 @@ function Console({ user, onLogout, onSession }) {
         <header className="console-topbar" aria-label="Console status">
           <div className="console-context">
             <span className="console-mark" aria-hidden="true" />
-            <span>ARGUS</span>
+            <span>NETSENTINEL</span>
             <span className="console-context-separator">/</span>
             <span>{activeSection}</span>
           </div>

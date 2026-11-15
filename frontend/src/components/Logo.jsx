@@ -1,9 +1,9 @@
 import React from 'react'
 
-// Shield + eye: "Argus", the all-seeing watchman.
+// Shield + eye product mark.
 export default function Logo({ size = 32 }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 32 32" role="img" aria-label="Argus logo">
+    <svg width={size} height={size} viewBox="0 0 32 32" role="img" aria-label="NetSentinel logo">
       <defs>
         <linearGradient id="argusGrad" x1="0" y1="0" x2="1" y2="1">
           <stop offset="0" stopColor="#efdcab" />

@@ -7,7 +7,7 @@ const FEATURES = [
     title: 'Web access logs',
     category: 'Live connector',
     summary: 'Monitor selected requests from a connected web server.',
-    detail: 'The optional collector reads access logs and sends allowed request metadata to Argus. It does not collect form contents, request bodies, cookies, or authorization headers.',
+    detail: 'The optional collector reads access logs and sends allowed request metadata to NetSentinel. It does not collect form contents, request bodies, cookies, or authorization headers.',
     icon: Activity,
     tone: 'gold',
   },
@@ -39,7 +39,7 @@ const FEATURES = [
     title: 'Privacy controls',
     category: 'You decide',
     summary: 'Choose what a connected collector is allowed to send.',
-    detail: 'The collector filters and redacts selected data before sending it. Argus applies the source policy again when events arrive, and a source key can be revoked.',
+    detail: 'The collector filters and redacts selected data before sending it. NetSentinel applies the source policy again when events arrive, and a source key can be revoked.',
     icon: LockKeyhole,
     tone: 'blue',
   },
@@ -55,7 +55,7 @@ const FEATURES = [
     title: 'Human-controlled response',
     category: 'No automatic blocking',
     summary: 'Review suggested mitigations without changing your systems.',
-    detail: 'Applying a mitigation in Argus is a simulation: it records the choice and may update a simulated blocklist. It does not execute firewall, WAF, or host changes.',
+    detail: 'Applying a mitigation in NetSentinel is a simulation: it records the choice and may update a simulated blocklist. It does not execute firewall, WAF, or host changes.',
     icon: ShieldCheck,
     tone: 'green',
   },
@@ -70,7 +70,7 @@ export default function LoginFeatureGrid() {
         <Reveal className="auth-features-heading">
           <p className="auth-features-eyebrow">Explore the platform</p>
           <h2 id="auth-features-title">A clearer picture of your security signals</h2>
-          <p>Choose a card to learn what Argus does—and where its limits are.</p>
+          <p>Choose a card to learn what NetSentinel does—and where its limits are.</p>
         </Reveal>
 
         <div className="feature-grid">

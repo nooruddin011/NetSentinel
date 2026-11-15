@@ -6,7 +6,7 @@ import Logo from './Logo'
 
 const SUGGESTIONS = ['Status summary', 'What can you detect?', 'Critical alerts', 'Top attackers', 'What is SQL injection?', 'How do I stop brute force?', 'Which model is best?']
 const now = () => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-const welcome = () => [{ role: 'bot', t: now(), text: 'Hi! I answer from your own data. Ask about current alerts, attackers, what Argus can detect, an attack type, or model accuracy.' }]
+const welcome = () => [{ role: 'bot', t: now(), text: 'Hi! I answer from your own data. Ask about current alerts, attackers, what NetSentinel can detect, an attack type, or model accuracy.' }]
 
 // Render **bold** segments without dangerouslySetInnerHTML (replies may contain attacker-controlled text).
 const Rich = ({ text }) => text.split(/(\*\*[^*]+\*\*)/g).map((p, i) => (p.startsWith('**') && p.endsWith('**') ? <strong key={i}>{p.slice(2, -2)}</strong> : <React.Fragment key={i}>{p}</React.Fragment>))

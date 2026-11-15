@@ -1,6 +1,6 @@
 <div align="center">
 
-# Argus
+# NetSentinel
 
 **Explainable threat detection and live monitoring, runnable on your own machine.**
 
@@ -20,13 +20,13 @@ A hybrid detection pipeline, a real-time dashboard, and a log collector that con
 </div>
 
 > [!IMPORTANT]
-> **Argus is research and educational software.** The shipped detection models are trained on simulated data, so their metrics do not establish real-world detection performance. Mitigations produce *simulated* rules and are never applied to a firewall or production system. Do not use Argus as your only security control.
+> **NetSentinel is research and educational software.** The shipped detection models are trained on simulated data, so their metrics do not establish real-world detection performance. Mitigations produce *simulated* rules and are never applied to a firewall or production system. Do not use NetSentinel as your only security control.
 
 ---
 
 ## Overview
 
-Argus watches a stream of security events, decides which ones are threats, and explains why. It accepts events from four places: a built-in simulator, CSV uploads, a REST API, and an optional **collector** that streams a real web server's access log to the dashboard in real time.
+NetSentinel watches a stream of security events, decides which ones are threats, and explains why. It accepts events from four places: a built-in simulator, CSV uploads, a REST API, and an optional **collector** that streams a real web server's access log to the dashboard in real time.
 
 Every alert comes with the evidence behind it, a risk score, and attack-specific mitigation guidance. The whole system runs locally, either with a single Docker command or as a normal Python and Node.js development setup.
 
@@ -38,19 +38,19 @@ Every alert comes with the evidence behind it, a risk score, and attack-specific
 | **15 attack types** | SQL injection, XSS, brute force, DDoS, path traversal, command injection, web reconnaissance, phishing, malware, ransomware, botnet, port scanning, insider threat, MITM, and zero-day anomalies. |
 | **Explainable alerts** | Each finding lists the detectors that fired, the evidence, a risk score, and mitigation options. |
 | **Real-time dashboard** | Live event feed, KPIs, charts, an attack heatmap by hour, and a short-term forecast, streamed over WebSockets. |
-| **Live log connector** | A dependency-free collector ships web access logs to Argus with a revocable API key, client-side privacy filters, and no lost or duplicated events. |
+| **Live log connector** | A dependency-free collector ships web access logs to NetSentinel with a revocable API key, client-side privacy filters, and no lost or duplicated events. |
 | **Honest coverage panel** | Shows which attack types your connected sources can see, which they cannot, and what extra source would cover them. |
 | **Demo and Live modes** | Simulated traffic switches off automatically when a real source connects, so real and simulated data never mix. |
 | **Role-based access** | Viewer, Analyst, and Admin roles, an audit log, and login rate limiting. |
 | **Reports and uploads** | Analyse network-flow CSV files, and export PDF or CSV reports. |
 | **Assistant** | A rule-based chatbot that answers questions from your own data. It calls no external service and needs no API key. |
-| **Docker lab** | A contained, deliberately vulnerable target website, the collector, and Argus, started with one command. |
+| **Docker lab** | A contained, deliberately vulnerable target website, the collector, and NetSentinel, started with one command. |
 
 ---
 
 ## Quick start
 
-Pick one path. **Option A** is the fastest way to see Argus detect real attacks.
+Pick one path. **Option A** is the fastest way to see NetSentinel detect real attacks.
 
 | | Best for | Needs |
 | --- | --- | --- |
@@ -60,7 +60,7 @@ Pick one path. **Option A** is the fastest way to see Argus detect real attacks.
 
 ### Option A: Docker lab (recommended)
 
-The lab runs entirely on your computer and binds to `localhost`. It starts Argus, a deliberately vulnerable website ([DVWA](https://github.com/digininja/DVWA)), a logging proxy in front of it, and the collector that connects them.
+The lab runs entirely on your computer and binds to `localhost`. It starts NetSentinel, a deliberately vulnerable website ([DVWA](https://github.com/digininja/DVWA)), a logging proxy in front of it, and the collector that connects them.
 
 > [!WARNING]
 > Only send test traffic to the lab target that **you** started. It is intentionally vulnerable. The lab's credentials and API key are public, so never reuse them anywhere else.
@@ -77,12 +77,12 @@ docker compose -f lab/docker-compose.lab.yml up --build -d
 
 | Service | URL | Credentials |
 | --- | --- | --- |
-| Argus dashboard | <http://localhost:8080> | `admin` / `Lab-Admin-Passw0rd!` |
+| NetSentinel dashboard | <http://localhost:8080> | `admin` / `Lab-Admin-Passw0rd!` |
 | DVWA target site | <http://localhost:8081> | `admin` / `password` (after step 3) |
 
 **3. Prepare the target once.** Open <http://localhost:8081/setup.php>, click **Create / Reset Database**, sign in, then set **DVWA Security** to **Low**.
 
-**4. Confirm the connection.** In Argus, open **Sources**. *Lab web server (DVWA)* should show **Connected**, and the Overview switches to **Live mode**. If it stays on *Waiting*, check the collector:
+**4. Confirm the connection.** In NetSentinel, open **Sources**. *Lab web server (DVWA)* should show **Connected**, and the Overview switches to **Live mode**. If it stays on *Waiting*, check the collector:
 
 ```bash
 docker compose -f lab/docker-compose.lab.yml logs collector
@@ -164,9 +164,9 @@ npm install
 npm run dev
 ```
 
-**5. Open <http://localhost:5173>** and sign in as `admin`. The password is `ADMIN_PASSWORD` from `.env`. If you left it empty, Argus generates one and prints it **once** in the backend terminal. Interactive API docs are at <http://localhost:8000/docs> (development only).
+**5. Open <http://localhost:5173>** and sign in as `admin`. The password is `ADMIN_PASSWORD` from `.env`. If you left it empty, NetSentinel generates one and prints it **once** in the backend terminal. Interactive API docs are at <http://localhost:8000/docs> (development only).
 
-On a fresh install Argus starts in **Demo mode** with simulated traffic. To fill the charts with a day of simulated history, run `python scripts/seed_demo.py` from the repository root.
+On a fresh install NetSentinel starts in **Demo mode** with simulated traffic. To fill the charts with a day of simulated history, run `python scripts/seed_demo.py` from the repository root.
 
 ### Option C: Docker Compose (production-style)
 
@@ -226,15 +226,15 @@ The backend is a FastAPI application. Each event runs through the matching detec
 
 ## Connect your own web server
 
-Argus never reaches into your systems. Instead, a small collector next to your web server reads its access log and sends events to Argus.
+NetSentinel never reaches into your systems. Instead, a small collector next to your web server reads its access log and sends events to NetSentinel.
 
-1. In Argus, open **Sources → Connect a source** (Admin role).
+1. In NetSentinel, open **Sources → Connect a source** (Admin role).
 2. Choose a name, what to hide (excluded paths, redacted parameters, optional IP pseudonyms), then copy the API key. **It is shown only once.**
 3. Run the collector next to your web server. It needs Python 3.8+ and no other packages:
 
 ```bash
 export ARGUS_KEY='agk_...'          # PowerShell: $env:ARGUS_KEY = 'agk_...'
-python argus_collector.py --url https://your-argus-host --file /var/log/nginx/access.log
+python argus_collector.py --url https://your-netsentinel-host --file /var/log/nginx/access.log
 ```
 
 The wizard shows a live "Waiting… Connected!" indicator and generates the exact command for Linux, macOS, Windows, and Docker. It reads Nginx and Apache *combined* logs and JSON logs. Secrets are redacted and excluded paths are dropped **on your machine, before anything is sent**. You can revoke a source's key at any time.
@@ -363,7 +363,7 @@ The frontend has no automated test suite yet. Known gaps and planned work are tr
 
 <br>
 
-Sign in as `admin`. If `ADMIN_PASSWORD` was empty when Argus first started, the generated password was printed **once** in the backend terminal. If you missed it, stop the backend, delete the database file at `data/cyberwatch.db`, set `ADMIN_PASSWORD` in `.env`, and start again. This removes your stored alerts and users.
+Sign in as `admin`. If `ADMIN_PASSWORD` was empty when NetSentinel first started, the generated password was printed **once** in the backend terminal. If you missed it, stop the backend, delete the database file at `data/cyberwatch.db`, set `ADMIN_PASSWORD` in `.env`, and start again. This removes your stored alerts and users.
 
 </details>
 
@@ -396,4 +396,4 @@ Run `npm install` inside `frontend/` again. This is needed after pulling an upda
 
 ## Responsible use
 
-Argus is built for learning and experimentation. Test only against systems you own or are explicitly authorised to test. The Docker lab target is DVWA, a third-party intentionally vulnerable application, and must stay on your local machine. Validate Argus with your own labelled data and environment before letting its output inform any security decision.
+NetSentinel is built for learning and experimentation. Test only against systems you own or are explicitly authorised to test. The Docker lab target is DVWA, a third-party intentionally vulnerable application, and must stay on your local machine. Validate NetSentinel with your own labelled data and environment before letting its output inform any security decision.
