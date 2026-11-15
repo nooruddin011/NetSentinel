@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react'
-import { KeyRound, LogOut, Moon, ShieldCheck, Sun } from 'lucide-react'
+import { KeyRound, LogOut, Moon, ShieldCheck, Sun, Trash2 } from 'lucide-react'
 import { api } from '../api'
 import { roleLabel } from '../brand'
 import { useTheme } from '../theme'
-import { useToast } from '../feedback'
+import { useConfirm, useToast } from '../feedback'
 import { Avatar, Card, ErrorNote, PageHead, PasswordHelp, RoleBadge, fmtTime, passwordRules } from './ui'
 import GoogleSignInButton from './GoogleSignInButton'
 
@@ -13,9 +13,10 @@ const ROLE_INFO = {
   admin: 'Everything an Analyst can do, plus user management, model retraining, settings and the audit log.',
 }
 
-export default function Account({ user, onSession, onLogout }) {
+export default function Account({ user, onSession, onLogout, onAccountDeleted }) {
   const { theme, toggle } = useTheme()
   const toast = useToast()
+  const confirm = useConfirm()
   const [profile, setProfile] = useState(user)
   useEffect(() => { api.me().then(setProfile).catch(() => {}) }, [])
   const [authConfig, setAuthConfig] = useState(null)
@@ -30,6 +31,8 @@ export default function Account({ user, onSession, onLogout }) {
   const [pw2, setPw2] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
+  const [deleting, setDeleting] = useState(false)
   const ok = passwordRules(pw, user.username).every((r) => r.ok) && pw === pw2 && cur && pw !== cur
 
   const submit = async (e) => {
@@ -54,6 +57,36 @@ export default function Account({ user, onSession, onLogout }) {
     } catch (err) { setGoogleError(err.message) }
   }
 
+  const deleteOwnerAccount = async () => {
+    setDeleteError('')
+    setDeleting(true)
+    try {
+      const { users } = await api.users()
+      const successor = users.find((member) => member.id !== user.id && member.role === 'admin' && member.is_active)
+      if (!successor) {
+        setDeleteError('Promote another active Admin before deleting your account. That Admin will become the workspace owner.')
+        setDeleting(false)
+        return
+      }
+      const first = await confirm({
+        title: 'Delete your owner account?', danger: true, confirmLabel: 'Continue',
+        body: 'Your account will be permanently deleted. Workspace data and other users will remain.'
+      })
+      if (!first.ok) { setDeleting(false); return }
+      const second = await confirm({
+        title: 'Confirm account deletion', danger: true, confirmLabel: 'Delete my account',
+        body: `${successor.full_name || successor.username} will become the workspace owner. You will be signed out and cannot recover this account.`
+      })
+      if (!second.ok) { setDeleting(false); return }
+      await api.deleteAccount()
+      toast('Owner account deleted. Workspace ownership transferred.')
+      onAccountDeleted()
+    } catch (err) {
+      setDeleteError(err.message)
+      setDeleting(false)
+    }
+  }
+
   return (
     <>
       <PageHead eyebrow="Account" title="My account" subtitle="Your profile, appearance and password." />
@@ -61,7 +94,7 @@ export default function Account({ user, onSession, onLogout }) {
         <Card title="Profile">
           <div className="row" style={{ gap: '1rem', marginBottom: '1rem' }}>
             <Avatar user={user} large />
-            <div><h2>{user.full_name || user.username}</h2><div className="muted mono">{user.username}</div><div style={{ marginTop: '.3rem' }}><RoleBadge role={user.role} /></div></div>
+            <div><h2>{user.full_name || user.username}</h2><div className="muted mono">{user.username}</div><div style={{ marginTop: '.3rem' }}><RoleBadge role={user.is_workspace_owner ? 'owner' : user.role} /></div></div>
           </div>
           <div className="note info" style={{ display: 'flex', gap: '.5rem' }}><ShieldCheck size={16} style={{ flex: 'none', marginTop: 2 }} /><span><b>{roleLabel(user.role)}.</b> {ROLE_INFO[user.role]}</span></div>
           <dl className="kv" style={{ marginTop: '.8rem' }}>
@@ -72,7 +105,13 @@ export default function Account({ user, onSession, onLogout }) {
             <button className="btn ghost sm" onClick={toggle}>{theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />} {theme === 'dark' ? 'Light' : 'Dark'} theme</button>
             <button className="btn ghost sm" onClick={() => onLogout()}><LogOut size={14} /> Sign out</button>
           </div>
-          <div className="google-link-section">
+          {user.is_workspace_owner && <div className="owner-delete-section">
+            <h3>Delete owner account</h3>
+            <p className="auth-note">This deletes your account but keeps workspace data and users. An active Admin must be available to take ownership.</p>
+            <ErrorNote error={deleteError} />
+            <button className="btn danger sm" type="button" disabled={deleting} onClick={deleteOwnerAccount}><Trash2 size={14} /> {deleting ? 'Checking workspace…' : 'Delete my account'}</button>
+          </div>}
+          {user.is_workspace_owner ? <div className="google-link-section">
             <h3>Google sign-in</h3>
             {googleIdentity?.linked
               ? <p className="auth-note">Connected as <b>{googleIdentity.email}</b>. You can use this Google account the next time you sign in.</p>
@@ -82,7 +121,7 @@ export default function Account({ user, onSession, onLogout }) {
                 {!authConfig?.google_client_id && authConfig && <p className="auth-note">Google sign-in has not been configured by the server administrator.</p>}
                 {googleError && <ErrorNote error={googleError} />}
               </>}
-          </div>
+          </div> : <div className="google-link-section"><h3>Google sign-in</h3><p className="auth-note">Google sign-in is reserved for the workspace owner. Use the username and password provided by your Admin.</p></div>}
         </Card>
         <Card title="Change password">
           <form className="grid" onSubmit={submit}>

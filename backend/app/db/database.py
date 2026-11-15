@@ -13,7 +13,8 @@ CREATE TABLE IF NOT EXISTS workspaces (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     created_by TEXT NOT NULL,
-    created_at REAL NOT NULL
+    created_at REAL NOT NULL,
+    owner_user_id INTEGER
 );
 CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -178,6 +179,9 @@ class Database:
     @staticmethod
     def _migrate(conn):
         """Apply additive schema changes and isolate pre-workspace accounts and data."""
+        workspace_cols = {r[1] for r in conn.execute("PRAGMA table_info(workspaces)")}
+        if "owner_user_id" not in workspace_cols:
+            conn.execute("ALTER TABLE workspaces ADD COLUMN owner_user_id INTEGER")
         have = {r[1] for r in conn.execute("PRAGMA table_info(users)")}
         for col, ddl in (("full_name", "TEXT"), ("last_login", "REAL"), ("workspace_id", "INTEGER")):
             if col not in have:
@@ -197,6 +201,12 @@ class Database:
                 wid = cur.lastrowid
                 conn.execute("UPDATE users SET role='admin' WHERE id=?", (user["id"],))
             conn.execute("UPDATE users SET workspace_id=? WHERE id=?", (wid, user["id"]))
+        # Resolve owners for workspaces created before owner_user_id was introduced.
+        conn.execute("UPDATE workspaces SET owner_user_id=(SELECT id FROM users WHERE users.workspace_id=workspaces.id AND users.username=workspaces.created_by COLLATE NOCASE ORDER BY id LIMIT 1) WHERE owner_user_id IS NULL AND created_by<>'system'")
+        # The original shared workspace used a system creator; its earliest member is the original owner.
+        conn.execute("UPDATE workspaces SET owner_user_id=(SELECT id FROM users WHERE users.workspace_id=workspaces.id ORDER BY id LIMIT 1) WHERE owner_user_id IS NULL AND id=1 AND created_by='system'")
+        # The owner always keeps Admin capability, including installs where another Admin changed it before this migration.
+        conn.execute("UPDATE users SET role='admin' WHERE id IN (SELECT owner_user_id FROM workspaces WHERE owner_user_id IS NOT NULL) AND role<>'admin'")
         # Existing workspace-owned records remain with the original Admin workspace.
         for table in ("events", "alerts", "sources", "mitigations", "blocklist", "upload_jobs", "audit_log"):
             cols = {r[1] for r in conn.execute(f"PRAGMA table_info({table})")}

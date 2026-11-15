@@ -4,7 +4,7 @@ Base URL `http://localhost:8000` (dev; the Vite proxy forwards `/api` and `/ws`)
 
 **Conventions** — JSON in/out; `Authorization: Bearer <JWT>` on everything except the **ingest door** (API key), login, registration, the login-page config and health; errors are `{"detail": "..."}` with 401 (unauthenticated), 403 (role), 404, 409 (conflict), 413/415 (upload), 422 (validation), 429 (login throttled, with `Retry-After`).
 
-**Roles** — Viewer < Analyst < Admin; each endpoint lists the *minimum* role.
+**Roles** — Viewer < Analyst < Admin; each endpoint lists the *minimum* role. The workspace Owner has Admin access and cannot be modified by another Admin.
 
 Authenticated requests are scoped to the caller's workspace. Self-registration creates a private workspace; Admin-created users join their Admin's workspace. Sources, events, alerts, uploads, reports, and live WebSocket feeds are isolated by workspace.
 
@@ -24,14 +24,15 @@ Authenticated requests are scoped to the caller's workspace. Self-registration c
 | GET | `/api/auth/config` | Public | Login settings: app name, self-registration state, and optional Google Web client ID |
 | POST | `/api/auth/google` | Public | Verify Google ID token and create a private workspace or sign in an already-linked user; returns the normal NetSentinel JWT |
 | GET | `/api/auth/google/identity` | Any signed-in user | Whether the current user has linked Google, and the linked email |
-| POST | `/api/auth/google/link` | Any signed-in user | Link a verified Google identity to the current account; identities already linked elsewhere are rejected |
+| POST | `/api/auth/google/link` | Workspace Owner | Link a verified Google identity to the owner account; identities already linked elsewhere are rejected |
 | POST | `/api/auth/login` | Public | Credentials → JWT. 401 wrong credentials; **403 account disabled** (only revealed with the correct password); 429 throttled |
 | GET | `/api/auth/me` | Any signed-in user | Current user incl. last sign-in |
+| DELETE | `/api/auth/account` | Workspace Owner | Delete the owner account and transfer ownership to an active Admin; workspace data is retained |
 | POST | `/api/auth/register` | Public | Legacy password self-registration endpoint; returns 403 because public workspace creation uses Google sign-in and local accounts are provisioned by a workspace Admin |
 | GET | `/api/auth/users` | Admin | List users |
 | POST | `/api/auth/users` | Admin | Create user with any role |
-| DELETE | `/api/auth/users/{user_id}` | Admin | Delete a user (not yourself, not the last Admin) |
-| PATCH | `/api/auth/users/{user_id}` | Admin | Change role / enable / disable / reset password / name (cannot change or disable yourself, or remove the last Admin) |
+| DELETE | `/api/auth/users/{user_id}` | Admin | Delete a workspace member; the Owner must use the self-delete endpoint |
+| PATCH | `/api/auth/users/{user_id}` | Admin | Change member role / enable / disable / reset password / name; Owner role, status, and password are protected from other Admins |
 | DELETE | `/api/blocklist/{ip}` | Admin | Remove an IP from the simulated blocklist |
 | POST | `/api/chat` | Viewer | Assistant (answers are computed from stored data) |
 | GET | `/api/collector/download` | Admin | Download `argus_collector.py` |

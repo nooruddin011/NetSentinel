@@ -35,7 +35,8 @@ _GOOGLE_VERIFY_REQUEST = _BoundedGoogleRequest(session=CacheControl(requests.Ses
 
 def _public(u: dict) -> dict:
     return dict(id=u["id"], username=u["username"], full_name=u.get("full_name"), role=u["role"],
-                workspace_id=u.get("workspace_id"), workspace_name=u.get("workspace_name"))
+                workspace_id=u.get("workspace_id"), workspace_name=u.get("workspace_name"),
+                is_workspace_owner=bool(u.get("is_workspace_owner")))
 
 
 def _issue(ctx, user: dict) -> dict:
@@ -126,6 +127,8 @@ def google_login(body: GoogleCredential, request: Request, ctx=Depends(get_ctx))
             user = ctx.repo.get_user(user_id)
     if not user:
         raise HTTPException(401, "Google account was not found")
+    if not user.get("is_workspace_owner"):
+        raise HTTPException(403, "Google sign-in is reserved for the workspace owner. Use the username and password provided by your Admin.")
     if not user["is_active"]:
         ctx.repo.audit(user["username"], "auth.google_disabled_login", None, None, client_ip(request), user["workspace_id"])
         raise HTTPException(403, DISABLED_MSG)
@@ -144,6 +147,8 @@ def google_identity(user=Depends(current_user), ctx=Depends(get_ctx)):
 
 @router.post("/google/link")
 def link_google(body: GoogleCredential, request: Request, user=Depends(current_user), ctx=Depends(get_ctx)):
+    if not user.get("is_workspace_owner"):
+        raise HTTPException(403, "Only the workspace owner can link Google sign-in. Use the username and password provided by your Admin.")
     claims = _verified_google_claims(body.credential, ctx)
     result = ctx.repo.link_google_identity(user["id"], claims["subject"], claims["email"])
     if result == "identity_in_use":
@@ -191,6 +196,22 @@ def me(user=Depends(current_user)):
     return dict(_public(user), last_login=user.get("last_login"), created_at=user.get("created_at"))
 
 
+@router.delete("/account")
+def delete_workspace_owner_account(request: Request, user=Depends(current_user), ctx=Depends(get_ctx)):
+    if not user.get("is_workspace_owner"):
+        raise HTTPException(403, "Only the workspace owner can delete this account")
+    admins = [u for u in ctx.repo.list_users()
+              if u["id"] != user["id"] and u["role"] == "admin" and u["is_active"]]
+    if not admins:
+        raise HTTPException(409, "Promote another active Admin before deleting your account so the workspace stays manageable")
+    successor = admins[0]
+    ctx.repo.audit(user["username"], "workspace.owner_account_delete", successor["username"],
+                   "ownership transferred; workspace data retained", client_ip(request), user["workspace_id"])
+    if not ctx.repo.delete_workspace_owner_account(user["id"], successor["id"]):
+        raise HTTPException(409, "Workspace ownership changed. Refresh and try again.")
+    return dict(status="deleted", new_owner=successor["username"])
+
+
 @router.post("/change-password")
 def change_password(body: PasswordChange, request: Request, user=Depends(current_user), ctx=Depends(get_ctx)):
     if not verify_password(body.current_password, user["password_hash"]):
@@ -225,6 +246,10 @@ def update_user(user_id: int, body: UserUpdate, request: Request, user=Depends(r
     target = ctx.repo.get_user(user_id)
     if not target:
         raise HTTPException(404, "User not found")
+    if target.get("is_workspace_owner") and (
+        body.role is not None or body.is_active is not None or (body.password is not None and target["id"] != user["id"])
+    ):
+        raise HTTPException(409, "The workspace owner cannot be changed by another Admin")
     if target["id"] == user["id"] and ((body.role is not None and body.role != target["role"]) or body.is_active is False):
         raise HTTPException(409, "You cannot change your own role or disable your own account")
     losing_admin = target["role"] == "admin" and target["is_active"] and (
@@ -246,6 +271,8 @@ def delete_user(user_id: int, request: Request, user=Depends(require("admin")), 
     target = ctx.repo.get_user(user_id)
     if not target:
         raise HTTPException(404, "User not found")
+    if target.get("is_workspace_owner"):
+        raise HTTPException(409, "The workspace owner must delete their own account from My Account")
     if target["id"] == user["id"]:
         raise HTTPException(409, "You cannot delete your own account")
     if target["role"] == "admin" and target["is_active"] and ctx.repo.count_admins() <= 1:

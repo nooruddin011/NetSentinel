@@ -66,6 +66,7 @@ export const api = {
   linkGoogle: (credential) => request('/api/auth/google/link', { method: 'POST', body: { credential } }),
   register: (username, password, full_name) => request('/api/auth/register', { method: 'POST', body: { username, password, full_name: full_name || null } }),
   me: () => request('/api/auth/me'),
+  deleteAccount: () => request('/api/auth/account', { method: 'DELETE' }),
   changePassword: (current_password, new_password) => request('/api/auth/change-password', { method: 'POST', body: { current_password, new_password } }),
   users: () => request('/api/auth/users'),
   createUser: (b) => request('/api/auth/users', { method: 'POST', body: b }),

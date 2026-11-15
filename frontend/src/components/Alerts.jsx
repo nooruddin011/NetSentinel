@@ -6,7 +6,7 @@ import { Bar, Card, Empty, ErrorNote, PageHead, SEV_COLOR, ScopeSwitch, SevBadge
 const ATTACKS = ['SQL Injection', 'XSS', 'Brute Force', 'Path Traversal', 'Command Injection', 'Web Reconnaissance', 'DDoS', 'Phishing', 'Malware', 'Ransomware', 'Botnet', 'Port Scanning', 'Insider Threat', 'MITM', 'Zero-Day']
 const KEY_FEATURES = ['dst_port', 'src_bytes', 'dst_bytes', 'duration', 'conn_count_src', 'distinct_dst_ports', 'failed_logins', 'syn_ratio', 'payload_entropy', 'sql_kw_count', 'script_tag_count', 'domain_age_days', 'beacon_interval_std', 'dns_query_rate', 'smb_write_rate', 'off_hours', 'unusual_dest', 'cert_mismatch']
 
-function FilterSelect({ label, value, options, onChange }) {
+export function FilterSelect({ label, value, options, onChange, disabled = false, title, showCaption = true }) {
   const [open, setOpen] = useState(false)
   const root = useRef(null)
   const selected = options.find((option) => option.value === value) || options[0]
@@ -49,8 +49,8 @@ function FilterSelect({ label, value, options, onChange }) {
 
   return (
     <div className={`filter-select ${open ? 'is-open' : ''}`} ref={root} onKeyDown={handleKeys}>
-      <button className="filter-trigger" type="button" aria-label={`${label}: ${selected.label}`} aria-haspopup="listbox" aria-expanded={open} onClick={() => setOpen((state) => !state)}>
-        <span className="filter-caption">{label}</span><span className="filter-value">{selected.label}</span><ChevronDown size={14} className="filter-chevron" aria-hidden="true" />
+      <button className="filter-trigger" type="button" disabled={disabled} title={title} aria-label={`${label}: ${selected.label}`} aria-haspopup="listbox" aria-expanded={open} onClick={() => setOpen((state) => !state)}>
+        {showCaption && <span className="filter-caption">{label}</span>}<span className="filter-value">{selected.label}</span><ChevronDown size={14} className="filter-chevron" aria-hidden="true" />
       </button>
       {open && <div className="filter-options" role="listbox" aria-label={label}>
         {options.map((option) => (

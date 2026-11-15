@@ -4,6 +4,7 @@ import { Activity, BellRing, Brain, ChevronDown, ChevronUp, Lock, LogOut, Moon, 
 import { api, getToken, onUnauthorized, setToken } from './api'
 import { BRAND, roleLabel } from './brand'
 import { useTheme } from './theme'
+import { useConfirm } from './feedback'
 import useLiveFeed from './hooks/useLiveFeed'
 import Login from './components/Login'
 import Logo from './components/Logo'
@@ -66,6 +67,7 @@ function NavAccessHint({ label, Icon, message }) {
 
 function Console({ user, onLogout, onSession }) {
   const { theme, toggle } = useTheme()
+  const confirm = useConfirm()
   const [view, setView] = useState('overview')
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [focusAlert, setFocusAlert] = useState(null)
@@ -80,6 +82,10 @@ function Console({ user, onLogout, onSession }) {
   const dot = live.status === 'live' ? 'live' : live.status === 'unauthorised' ? 'bad' : ''
   const feedLabel = live.status === 'live' ? 'Feed connected' : STATUS_TEXT[live.status] || live.status
   const training = train?.state === 'running'
+  const confirmLogout = useCallback(async () => {
+    const second = await confirm({ title: 'Confirm sign out', body: 'Are you sure you want to end your session now?', confirmLabel: 'Sign out' })
+    if (second.ok) onLogout()
+  }, [confirm, onLogout])
   useEffect(() => { setMobileNavOpen(false) }, [view])
   useEffect(() => {
     if (!mobileNavOpen) return undefined
@@ -190,11 +196,11 @@ function Console({ user, onLogout, onSession }) {
           <div className="account-controls">
             <button className="user-card" onClick={() => { setView('account'); setMobileNavOpen(false) }} title="Open your account" aria-label="Open your account">
               <Avatar user={user} />
-              <span className="who"><b>{user.full_name || user.username}</b><small className="workspace-label">{user.workspace_name}</small><RoleBadge role={user.role} /></span>
+              <span className="who"><b>{user.full_name || user.username}</b><small className="workspace-label">{user.workspace_name}</small><RoleBadge role={user.is_workspace_owner ? 'owner' : user.role} /></span>
             </button>
             <div className="foot-actions">
               <button className="icon-btn" onClick={toggle} aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`} title="Toggle theme">{theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}</button>
-              <button className="btn ghost sm" onClick={() => onLogout()}><LogOut size={14} /> Sign out</button>
+              <button className="btn ghost sm" onClick={confirmLogout}><LogOut size={14} /> Sign out</button>
             </div>
           </div>
         </div>
@@ -222,7 +228,7 @@ function Console({ user, onLogout, onSession }) {
           {view === 'models' && <Models user={user} train={train} setTrain={setTrain} />}
           {view === 'upload' && <Upload user={user} />}
           {view === 'admin' && canAct(user, 'admin') && <Admin user={user} />}
-          {view === 'account' && <Account user={user} onSession={onSession} onLogout={onLogout} />}
+          {view === 'account' && <Account user={user} onSession={onSession} onLogout={confirmLogout} onAccountDeleted={onLogout} />}
           </div>
         </ErrorBoundary>
       </main>

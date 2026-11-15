@@ -41,8 +41,8 @@ Every alert comes with the evidence behind it, a risk score, and attack-specific
 | **Live log connector** | A dependency-free collector ships web access logs to NetSentinel with a revocable API key, client-side privacy filters, and no lost or duplicated events. |
 | **Honest coverage panel** | Shows which attack types your connected sources can see, which they cannot, and what extra source would cover them. |
 | **Demo and Live modes** | Simulated traffic switches off automatically when a real source connects, so real and simulated data never mix. |
-| **Role-based access** | Viewer, Analyst, and Admin roles, an audit log, and login rate limiting. |
-| **Google sign-in** | Verify Google ID tokens on the backend, create a private workspace for a new Google user, and let existing users explicitly link Google to their account. |
+| **Role-based access** | Workspace Owner, Admin, Analyst, and Viewer access, an audit log, and login rate limiting. |
+| **Google sign-in** | Verify Google ID tokens on the backend and create a private workspace for a new Google user. Google sign-in is reserved for the workspace owner. |
 | **Reports and uploads** | Analyse network-flow CSV files, and export PDF or CSV reports. |
 | **Assistant** | A rule-based chatbot that answers questions from your own data. It calls no external service and needs no API key. |
 | **Docker lab** | A contained, deliberately vulnerable target website, the collector, and NetSentinel, started with one command. |
@@ -265,13 +265,14 @@ The web-log connector covers **SQL injection, XSS, brute force (web logins), pat
 
 **Roles**
 
-Each new Google sign-up gets a private workspace and becomes its Admin. Workspace members are created by that Admin and sign in with the username and password they are given. Dashboard data and source connections are isolated by workspace; existing lab data stays in its current workspace. Existing password accounts can link Google from Account settings.
+Each new Google sign-up gets a private workspace and becomes its Owner. Workspace members are created by an Admin and sign in with the username and password they are given. The Owner cannot be demoted, disabled, deleted, or have their password reset by another Admin. If the Owner deletes their own account, an active Admin takes ownership and workspace data remains.
 
 | Role | Can do |
 | --- | --- |
 | **Viewer** | Read dashboards, alerts, models, and the PDF summary; use the assistant. An Admin assigns this role within a workspace. |
 | **Analyst** | Everything a Viewer can, plus change alert status, apply simulated mitigations, upload and analyse files, and export CSV. |
 | **Admin** | Everything an Analyst can, plus manage workspace users, sources, simulator mode, and audit history. The platform Admin also controls public registration and shared model retraining. |
+| **Owner** | The workspace creator. Has Admin access and cannot be modified by other workspace members. Ownership can pass to another active Admin when the Owner deletes their account. |
 
 ---
 

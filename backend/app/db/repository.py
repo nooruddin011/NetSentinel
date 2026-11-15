@@ -66,6 +66,8 @@ class Repository:
         with self.db.connect() as c:
             cur = c.execute("INSERT INTO users(username,password_hash,role,created_at,full_name,workspace_id) VALUES(?,?,?,?,?,?)",
                             (username, password_hash, role, time.time(), (full_name or None), wid))
+            if workspace_id is None and role == "admin":
+                c.execute("UPDATE workspaces SET owner_user_id=? WHERE id=? AND owner_user_id IS NULL", (cur.lastrowid, wid))
             return cur.lastrowid
 
     def register_user(self, username, password_hash, full_name=None):
@@ -75,11 +77,13 @@ class Repository:
             wid = cur.lastrowid
             user = c.execute("INSERT INTO users(username,password_hash,role,created_at,full_name,workspace_id) VALUES(?,?,?,?,?,?)",
                              (username, password_hash, "admin", time.time(), full_name or None, wid))
+            c.execute("UPDATE workspaces SET owner_user_id=? WHERE id=?", (user.lastrowid, wid))
             return user.lastrowid, wid
 
     @staticmethod
     def _user_row(c, user_id):
-        return _row(c.execute("SELECT users.*,workspaces.name AS workspace_name FROM users "
+        return _row(c.execute("SELECT users.*,workspaces.name AS workspace_name, "
+                              "COALESCE(users.id=workspaces.owner_user_id,0) AS is_workspace_owner FROM users "
                               "LEFT JOIN workspaces ON workspaces.id=users.workspace_id WHERE users.id=?",
                               (user_id,)).fetchone())
 
@@ -122,6 +126,7 @@ class Repository:
                                  "VALUES(?,?,'admin',?,?,?)",
                                  (username, password_hash, time.time(), display_name, workspace_id))
             user_id = user_cur.lastrowid
+            c.execute("UPDATE workspaces SET owner_user_id=? WHERE id=?", (user_id, workspace_id))
             c.execute("INSERT INTO auth_identities(provider,subject,user_id,email,email_verified,created_at) "
                       "VALUES('google',?,?,?,1,?)", (subject, user_id, email, time.time()))
             return user_id, True
@@ -148,13 +153,17 @@ class Repository:
 
     def get_user_by_name(self, username):
         with self.db.connect() as c:
-            return _row(c.execute("SELECT users.*,workspaces.name AS workspace_name FROM users LEFT JOIN workspaces ON workspaces.id=users.workspace_id WHERE username=?", (username,)).fetchone())
+            return _row(c.execute("SELECT users.*,workspaces.name AS workspace_name, "
+                                  "COALESCE(users.id=workspaces.owner_user_id,0) AS is_workspace_owner "
+                                  "FROM users LEFT JOIN workspaces ON workspaces.id=users.workspace_id WHERE username=?", (username,)).fetchone())
 
     def get_user(self, user_id):
         clause, vals = self._ws()
         clause = clause.replace("workspace_id", "users.workspace_id")
         with self.db.connect() as c:
-            return _row(c.execute(f"SELECT users.*,workspaces.name AS workspace_name FROM users LEFT JOIN workspaces ON workspaces.id=users.workspace_id WHERE users.id=?{clause}", (user_id, *vals)).fetchone())
+            return _row(c.execute(f"SELECT users.*,workspaces.name AS workspace_name, "
+                                  f"COALESCE(users.id=workspaces.owner_user_id,0) AS is_workspace_owner "
+                                  f"FROM users LEFT JOIN workspaces ON workspaces.id=users.workspace_id WHERE users.id=?{clause}", (user_id, *vals)).fetchone())
 
     def get_workspace(self, workspace_id):
         with self.db.connect() as c:
@@ -166,11 +175,13 @@ class Repository:
 
     def list_users(self, workspace_id=None):
         wid = workspace_id if workspace_id is not None else self.workspace_id
-        clause = " WHERE workspace_id=?" if wid is not None else ""
+        clause = " WHERE users.workspace_id=?" if wid is not None else ""
         values = (wid,) if wid is not None else ()
         with self.db.connect() as c:
             return [dict(r) for r in c.execute(
-                f"SELECT id,username,full_name,role,is_active,created_at,last_login,workspace_id FROM users{clause} ORDER BY id", values)]
+                f"SELECT users.id,username,full_name,role,is_active,users.created_at,last_login,users.workspace_id, "
+                f"COALESCE(users.id=workspaces.owner_user_id,0) AS is_workspace_owner "
+                f"FROM users LEFT JOIN workspaces ON workspaces.id=users.workspace_id{clause} ORDER BY users.id", values)]
 
     def update_user(self, user_id, role=None, is_active=None, password_hash=None, full_name=None):
         sets, vals = [], []
@@ -192,6 +203,21 @@ class Repository:
         clause, wsvals = self._ws()
         with self.db.connect() as c:
             return c.execute(f"DELETE FROM users WHERE id=?{clause}", (user_id, *wsvals)).rowcount > 0
+
+    def delete_workspace_owner_account(self, owner_user_id, successor_user_id) -> bool:
+        """Delete the owner account while transferring workspace ownership to an active Admin."""
+        if self.workspace_id is None:
+            return False
+        with self.db.connect() as c:
+            c.execute("BEGIN IMMEDIATE")
+            owner = c.execute("SELECT owner_user_id FROM workspaces WHERE id=?", (self.workspace_id,)).fetchone()
+            successor = c.execute("SELECT id FROM users WHERE id=? AND workspace_id=? AND role='admin' AND is_active=1",
+                                  (successor_user_id, self.workspace_id)).fetchone()
+            if not owner or owner[0] != owner_user_id or not successor:
+                return False
+            c.execute("UPDATE workspaces SET owner_user_id=? WHERE id=?", (successor_user_id, self.workspace_id))
+            deleted = c.execute("DELETE FROM users WHERE id=? AND workspace_id=?", (owner_user_id, self.workspace_id))
+            return deleted.rowcount == 1
 
     def touch_login(self, user_id):
         with self.db.connect() as c:

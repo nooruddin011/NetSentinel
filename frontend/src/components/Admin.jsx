@@ -4,6 +4,7 @@ import { api } from '../api'
 import { BRAND, roleLabel } from '../brand'
 import { useConfirm, useToast } from '../feedback'
 import { Avatar, Card, Empty, PageHead, ErrorNote, PasswordHelp, RoleBadge, Spinner, Tabs, bytes, fmtTime, passwordRules } from './ui'
+import { FilterSelect } from './Alerts'
 
 const ROLES = ['viewer', 'analyst', 'admin']
 const USERNAME_OK = /^[A-Za-z0-9_.@-]{3,64}$/
@@ -60,16 +61,20 @@ function Users({ me }) {
         {!users ? <Spinner /> : <div className="table-wrap" style={{ maxHeight: 520 }}><table><thead><tr><th>User</th><th>Role</th><th>Status</th><th>Last sign-in</th><th /></tr></thead><tbody>
           {users.map((u) => {
             const self = u.id === me.id
+            const owner = u.is_workspace_owner
+            const roleOptions = ROLES.map((role) => ({ value: role, label: roleLabel(role) }))
             return (
               <tr key={u.id}>
                 <td><div className="row" style={{ flexWrap: 'nowrap' }}><Avatar user={u} /><div><b>{u.full_name || u.username}</b>{self && <span className="muted"> (you)</span>}<div className="muted mono">{u.username}</div></div></div></td>
-                <td><select value={u.role} disabled={self} title={self ? 'You cannot change your own role' : undefined} onChange={(e) => run(() => api.updateUser(u.id, { role: e.target.value }), `${u.username} is now ${roleLabel(e.target.value)}`)} aria-label={`Role of ${u.username}`}>{ROLES.map((r) => <option key={r} value={r}>{roleLabel(r)}</option>)}</select></td>
+                <td>{owner
+                  ? <span className="filter-value">Owner</span>
+                  : <FilterSelect label="Role" showCaption={false} value={u.role} options={roleOptions} disabled={self} title={self ? 'You cannot change your own role' : undefined} onChange={(role) => run(() => api.updateUser(u.id, { role }), `${u.username} is now ${roleLabel(role)}`)} />}</td>
                 <td>{u.is_active ? <span className="badge st-mitigated">Active</span> : <span className="badge st-open">Disabled</span>}</td>
                 <td className="muted">{u.last_login ? fmtTime(u.last_login) : 'Never'}</td>
                 <td><div className="row" style={{ gap: '.3rem', flexWrap: 'nowrap' }}>
-                  <button className="btn ghost sm" disabled={self} onClick={() => run(() => api.updateUser(u.id, { is_active: !u.is_active }), u.is_active ? 'User disabled' : 'User enabled')}>{u.is_active ? 'Disable' : 'Enable'}</button>
-                  <button className="btn ghost sm" onClick={() => setReset(u)} title="Reset password" aria-label={`Reset password for ${u.username}`}><KeyRound size={13} /></button>
-                  <button className="btn ghost sm" disabled={self} onClick={() => remove(u)} title="Delete user" aria-label={`Delete ${u.username}`}><Trash2 size={13} /></button></div></td>
+                  <button className="btn ghost sm" disabled={self || owner} onClick={() => run(() => api.updateUser(u.id, { is_active: !u.is_active }), u.is_active ? 'User disabled' : 'User enabled')}>{u.is_active ? 'Disable' : 'Enable'}</button>
+                  <button className="btn ghost sm" disabled={owner} onClick={() => setReset(u)} title={owner ? 'The owner changes their own password' : 'Reset password'} aria-label={`Reset password for ${u.username}`}><KeyRound size={13} /></button>
+                  <button className="btn ghost sm" disabled={self || owner} onClick={() => remove(u)} title={owner ? 'The owner deletes their own account' : 'Delete user'} aria-label={`Delete ${u.username}`}><Trash2 size={13} /></button></div></td>
               </tr>)
           })}
         </tbody></table></div>}
@@ -81,7 +86,7 @@ function Users({ me }) {
           {form.username && !usernameOk && <div style={{ color: 'var(--danger)', fontSize: '.8rem' }}>Use 3–64 characters: letters, digits and _ . - @ (no spaces).</div>}
           <label className="field">Password<input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required autoComplete="new-password" /></label>
           <PasswordHelp password={form.password} username={form.username} />
-          <label className="field">Role<select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>{ROLES.map((r) => <option key={r} value={r}>{roleLabel(r)}</option>)}</select></label>
+          <div className="field">Role<FilterSelect label="Role" value={form.role} options={ROLES.map((role) => ({ value: role, label: roleLabel(role) }))} onChange={(role) => setForm({ ...form, role })} /></div>
           <button className="btn" disabled={!canCreate}><UserPlus size={15} /> Create user</button>
           <div className="muted" style={{ fontSize: '.78rem' }}><RoleBadge role="viewer" /> dashboards, alerts, reports · <RoleBadge role="analyst" /> + upload, triage, mitigate · <RoleBadge role="admin" /> + users, retraining, settings.</div>
         </form>
