@@ -20,7 +20,7 @@ An open-source research platform with a real-time dashboard, hybrid detection pi
 > [!IMPORTANT]
 > **NetSentinel is research and educational software, not a production security control.** Shipped models were trained on simulated data, so their metrics do not establish real-world performance. Mitigations are currently simulated and do not change a firewall, web application firewall, or other system. Use the vulnerable target only in the local lab, and test only systems you own or are authorised to assess.
 
-## What it does
+## What it does ?
 
 - Ingests events from a traffic simulator, network-flow CSV uploads, the REST API, and an optional web access-log collector.
 - Scores events using signature and behaviour rules, a text classifier for web requests, and a supervised model ensemble with anomaly detection for flow data.
