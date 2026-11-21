@@ -7,8 +7,8 @@
 An open-source research platform with a real-time dashboard, hybrid detection pipeline, and optional web access-log collector.
 
 [![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![Vite](https://img.shields.io/badge/Vite-5-646CFF?style=flat-square&logo=vite&logoColor=white)](https://vitejs.dev/)
 [![SQLite](https://img.shields.io/badge/SQLite-003B57?style=flat-square&logo=sqlite&logoColor=white)](https://www.sqlite.org/)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker&logoColor=white)](https://www.docker.com/)
@@ -84,7 +84,7 @@ In the supplied Docker setup, workspace records, users, events, alerts, sources,
 
 The named volume is persistent on the Docker host, but it is not a managed cloud database or a backup strategy. Anyone deploying for real users must arrange encrypted backups and recovery tests and should plan a move to managed PostgreSQL and object storage before scaling beyond a small, single-host pilot. The application currently uses SQLite; a PostgreSQL deployment requires an application/database migration and verification rather than just changing a hosting setting.
 
-## Technology -
+## Technology
 
 - **Frontend:** React, Vite, Recharts
 - **Backend:** Python, FastAPI, Pydantic, Uvicorn
