@@ -20,7 +20,7 @@ An open-source research platform with a real-time dashboard, hybrid detection pi
 > [!IMPORTANT]
 > **NetSentinel is research and educational software, not a production security control.** Shipped models were trained on simulated data, so their metrics do not establish real-world performance. Mitigations are currently simulated and do not change a firewall, web application firewall, or other system. Use the vulnerable target only in the local lab, and test only systems you own or are authorised to assess.
 
-## What it does ?
+## What it does
 
 - Ingests events from a traffic simulator, network-flow CSV uploads, the REST API, and an optional web access-log collector.
 - Scores events using signature and behaviour rules, a text classifier for web requests, and a supervised model ensemble with anomaly detection for flow data.
@@ -84,7 +84,7 @@ In the supplied Docker setup, workspace records, users, events, alerts, sources,
 
 The named volume is persistent on the Docker host, but it is not a managed cloud database or a backup strategy. Anyone deploying for real users must arrange encrypted backups and recovery tests and should plan a move to managed PostgreSQL and object storage before scaling beyond a small, single-host pilot. The application currently uses SQLite; a PostgreSQL deployment requires an application/database migration and verification rather than just changing a hosting setting.
 
-## Technology
+## Technology -
 
 - **Frontend:** React, Vite, Recharts
 - **Backend:** Python, FastAPI, Pydantic, Uvicorn
