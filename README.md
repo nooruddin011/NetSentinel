@@ -40,7 +40,7 @@ flowchart LR
   CSV[Flow CSV] --> INGEST
   API[REST API] --> INGEST
   COL --> INGEST
-  INGEST --> DETECT[Detection and scoring]
+  INGEST --> DETECT[Detection and Scoring]
   DETECT --> DB[(SQLite)]
   DETECT --> WS[WebSocket updates]
   DB --> REST[Workspace-scoped API]
