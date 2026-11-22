@@ -13,7 +13,7 @@ An open-source research platform with a real-time dashboard, hybrid detection pi
 [![SQLite](https://img.shields.io/badge/SQLite-003B57?style=flat-square&logo=sqlite&logoColor=white)](https://www.sqlite.org/)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker&logoColor=white)](https://www.docker.com/)
 
-[Features](#what-it-does) | [Architecture](#how-it-works) | [Docker lab](#run-the-local-docker-lab) | [Data and workspaces](#data-and-workspaces) | [Documentation](#documentation)
+[Features](#what-it-does) | [Architecture](#how-it-works) | [Docker Lab](#run-the-local-docker-lab) | [Data & Workspaces](#data-and-workspaces) | [Documentation](#documentation)
 
 </div>
 
