@@ -1,6 +1,6 @@
 <div align="center">
 
-# NetSentinel
+# NetSentinel.
 
 **Explainable threat detection and live monitoring for network and web events.**
 
