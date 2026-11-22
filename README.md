@@ -1,10 +1,10 @@
 <div align="center">
 
-# NetSentinel.
+# NetSentinel
 
 **Explainable threat detection and live monitoring for network and web events.**
 
-An open-source research platform with a real-time dashboard, hybrid detection pipeline, and optional web access-log collector.
+An open-source research platform with a real-time dashboard, hybrid detection pipeline, and an optional web access-log collector.
 
 [![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
 [![React](https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev/)
